@@ -13,10 +13,10 @@ import org.marc.everest.rmim.uv.cdar2.pocd_mt000040uv.ClinicalDocument;
 import org.openmrs.Patient;
 import org.openmrs.Visit;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.openhie.client.api.HealthInformationExchangeService;
-import org.openmrs.module.openhie.client.exception.HealthInformationExchangeException;
-import org.openmrs.module.openhie.client.hie.model.DocumentInfo;
 import org.openmrs.module.openhie.client.web.model.DocumentModel;
+import org.openmrs.module.santedb.client.api.SanteDbClientService;
+import org.openmrs.module.santedb.client.exception.SanteDbClientException;
+import org.openmrs.module.santedb.client.hie.model.DocumentInfo;
 import org.openmrs.module.shr.cdahandler.CdaImporter;
 import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
 import org.openmrs.module.shr.cdahandler.everest.EverestUtil;
@@ -44,7 +44,7 @@ public class HieDocumentConsumerController extends PortletController {
 			Map<String, Object> model) {
 		
 		log.debug("Populating model");
-		HealthInformationExchangeService hieService = Context.getService(HealthInformationExchangeService.class);
+		SanteDbClientService hieService = Context.getService(SanteDbClientService.class);
 		// TODO Auto-generated method stub
 		Object pidFromModel = model.get("patientId");
 		Integer pid = pidFromModel instanceof Integer ? (Integer)pidFromModel : Integer.parseInt(pidFromModel.toString());

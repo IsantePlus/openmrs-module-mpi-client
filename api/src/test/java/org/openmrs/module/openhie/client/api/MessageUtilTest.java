@@ -14,8 +14,8 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.PersonName;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.openhie.client.exception.HealthInformationExchangeException;
-import org.openmrs.module.openhie.client.util.MessageUtil;
+import org.openmrs.module.santedb.client.exception.SanteDbClientException;
+import org.openmrs.module.santedb.client.util.MessageUtil;
 import org.openmrs.test.BaseModuleContextSensitiveTest;
 
 import ca.uhn.hl7v2.HL7Exception;
@@ -124,7 +124,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 			Assert.assertEquals("1.2.3.4.5", pat.get(0).getIdentifiers().iterator().next().getIdentifierType().getName());
 			Assert.assertEquals("F", pat.get(0).getGender());
 			Assert.assertEquals(false, pat.get(0).getBirthdateEstimated());
-		} catch (HealthInformationExchangeException e) {
+		} catch (SanteDbClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -148,7 +148,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 			List<Patient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
 			Assert.assertEquals(1, pat.size());
 			Assert.assertEquals(2, pat.get(0).getIdentifiers().size());
-		} catch (HealthInformationExchangeException e) {
+		} catch (SanteDbClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -171,7 +171,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 		{
 			List<Patient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
 			Assert.assertEquals(2, pat.size());
-		} catch (HealthInformationExchangeException e) {
+		} catch (SanteDbClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

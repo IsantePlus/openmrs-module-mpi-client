@@ -11,11 +11,11 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.Encounter;
 import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.openhie.client.api.HealthInformationExchangeService;
-import org.openmrs.module.openhie.client.exception.HealthInformationExchangeException;
-import org.openmrs.module.openhie.client.hie.model.DocumentInfo;
 import org.openmrs.module.openhie.client.web.model.DocumentModel;
 import org.openmrs.module.openhie.client.web.model.PatientSearchModel;
+import org.openmrs.module.santedb.client.api.SanteDbClientService;
+import org.openmrs.module.santedb.client.exception.SanteDbClientException;
+import org.openmrs.module.santedb.client.hie.model.DocumentInfo;
 import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
 import org.openmrs.web.controller.PortletController;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +49,7 @@ public class HieDocumentImportController {
 		
 		try
 		{
-			HealthInformationExchangeService service = Context.getService(HealthInformationExchangeService.class);
+			SanteDbClientService service = Context.getService(SanteDbClientService.class);
 			CdaHandlerConfiguration config = CdaHandlerConfiguration.getInstance();
 			DocumentInfo docInfo = new DocumentInfo();
 			docInfo.setUniqueId(uuid);
@@ -58,7 +58,7 @@ public class HieDocumentImportController {
 			model.put("document", DocumentModel.createInstance(service.fetchDocument(docInfo)));
 			return new ModelAndView("/module/openhie-client/hieImportDocument", model);
 		}
-		catch(HealthInformationExchangeException e) {
+		catch(SanteDbClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			model.put("error", e.getMessage());
@@ -74,7 +74,7 @@ public class HieDocumentImportController {
 	@RequestMapping(method = RequestMethod.POST)
 	public ModelAndView doImport(Map<String, Object> model, @RequestParam(value = "uuid") String uuid, @RequestParam(value="rep") String rep) throws ParseException
 	{
-		HealthInformationExchangeService hieService = Context.getService(HealthInformationExchangeService.class);
+		SanteDbClientService hieService = Context.getService(SanteDbClientService.class);
 		DocumentInfo docInfo = new DocumentInfo();
 		docInfo.setUniqueId(uuid);
 		docInfo.setRepositoryId(rep);
@@ -82,7 +82,7 @@ public class HieDocumentImportController {
 			hieService.importDocument(docInfo);
 			model.clear();
 			return new ModelAndView("/module/openhie-client/hieImportDocument", model);
-		} catch (HealthInformationExchangeException e) {
+		} catch (SanteDbClientException e) {
 			// TODO Auto-generated catch block
 			return new ModelAndView("/module/openhie-client/hieImportDocument", model);
 		}

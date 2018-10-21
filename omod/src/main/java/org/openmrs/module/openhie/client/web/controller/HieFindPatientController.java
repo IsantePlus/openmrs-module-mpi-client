@@ -14,10 +14,10 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.openhie.client.api.HealthInformationExchangeService;
-import org.openmrs.module.openhie.client.exception.HealthInformationExchangeException;
 import org.openmrs.module.openhie.client.web.model.PatientResultModel;
 import org.openmrs.module.openhie.client.web.model.PatientSearchModel;
+import org.openmrs.module.santedb.client.api.SanteDbClientService;
+import org.openmrs.module.santedb.client.exception.SanteDbClientException;
 import org.openmrs.web.controller.PortletController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -57,7 +57,7 @@ public class HieFindPatientController {
 	public ModelAndView doSearch(Map<String, Object> model, @ModelAttribute("patientSearch") PatientSearchModel search) throws ParseException
 	{
 		// Service for the HIE
-		HealthInformationExchangeService service = Context.getService(HealthInformationExchangeService.class);
+		SanteDbClientService service = Context.getService(SanteDbClientService.class);
 		Date dobDate = null;
 		boolean isFuzzy = false;
 		PatientIdentifier identifier = null,
@@ -89,7 +89,7 @@ public class HieFindPatientController {
 			model.put("patientSearch", search);
 			
 			return new ModelAndView("/module/openhie-client/hieFindPatient", model);
-		} catch (HealthInformationExchangeException e) {
+		} catch (SanteDbClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			model.put("error", e.getMessage());

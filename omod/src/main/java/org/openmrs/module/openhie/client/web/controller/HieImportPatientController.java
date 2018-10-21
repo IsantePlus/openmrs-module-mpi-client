@@ -7,9 +7,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.openhie.client.api.HealthInformationExchangeService;
-import org.openmrs.module.openhie.client.exception.HealthInformationExchangeException;
 import org.openmrs.module.openhie.client.web.model.PatientSearchModel;
+import org.openmrs.module.santedb.client.api.SanteDbClientService;
+import org.openmrs.module.santedb.client.exception.SanteDbClientException;
 import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -37,12 +37,12 @@ public class HieImportPatientController {
 		
 		try
 		{
-			HealthInformationExchangeService service = Context.getService(HealthInformationExchangeService.class);
+			SanteDbClientService service = Context.getService(SanteDbClientService.class);
 			CdaHandlerConfiguration config = CdaHandlerConfiguration.getInstance();
 			model.put("patient", service.getPatient(ecid, config.getEcidRoot()));
 			return new ModelAndView("/module/openhie-client/hieImportPatient", model);
 		}
-		catch(HealthInformationExchangeException e) {
+		catch(SanteDbClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			model.put("error", e.getMessage());
@@ -64,13 +64,13 @@ public class HieImportPatientController {
 		try
 		{
 			// Service for the HIE
-			HealthInformationExchangeService service = Context.getService(HealthInformationExchangeService.class);
+			SanteDbClientService service = Context.getService(SanteDbClientService.class);
 			CdaHandlerConfiguration config = CdaHandlerConfiguration.getInstance();
 			Patient pat = service.getPatient(ecid, config.getEcidRoot());
 			pat = service.importPatient(pat);
 			return new ModelAndView("redirect:/patientDashboard.form?patientId=" + pat.getId().toString() );
 		}
-		catch(HealthInformationExchangeException e) {
+		catch(SanteDbClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			model.put("error", e.getMessage());

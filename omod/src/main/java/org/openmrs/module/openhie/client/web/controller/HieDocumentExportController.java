@@ -25,17 +25,17 @@ import org.openmrs.Provider;
 import org.openmrs.activelist.Allergy;
 import org.openmrs.activelist.Problem;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.openhie.client.api.HealthInformationExchangeService;
-import org.openmrs.module.openhie.client.cda.document.DocumentBuilder;
-import org.openmrs.module.openhie.client.cda.section.impl.ActiveProblemsSectionBuilder;
-import org.openmrs.module.openhie.client.cda.section.impl.AllergiesIntolerancesSectionBuilder;
-import org.openmrs.module.openhie.client.cda.section.impl.AntepartumFlowsheetPanelSectionBuilder;
-import org.openmrs.module.openhie.client.cda.section.impl.EstimatedDeliveryDateSectionBuilder;
-import org.openmrs.module.openhie.client.cda.section.impl.MedicationsSectionBuilder;
-import org.openmrs.module.openhie.client.cda.section.impl.VitalSignsSectionBuilder;
-import org.openmrs.module.openhie.client.hie.model.DocumentInfo;
-import org.openmrs.module.openhie.client.util.CdaMetadataUtil;
 import org.openmrs.module.openhie.client.web.model.DocumentModel;
+import org.openmrs.module.santedb.client.api.SanteDbClientService;
+import org.openmrs.module.santedb.client.cda.document.DocumentBuilder;
+import org.openmrs.module.santedb.client.cda.section.impl.ActiveProblemsSectionBuilder;
+import org.openmrs.module.santedb.client.cda.section.impl.AllergiesIntolerancesSectionBuilder;
+import org.openmrs.module.santedb.client.cda.section.impl.AntepartumFlowsheetPanelSectionBuilder;
+import org.openmrs.module.santedb.client.cda.section.impl.EstimatedDeliveryDateSectionBuilder;
+import org.openmrs.module.santedb.client.cda.section.impl.MedicationsSectionBuilder;
+import org.openmrs.module.santedb.client.cda.section.impl.VitalSignsSectionBuilder;
+import org.openmrs.module.santedb.client.hie.model.DocumentInfo;
+import org.openmrs.module.santedb.client.util.CdaMetadataUtil;
 import org.openmrs.module.shr.cdahandler.CdaHandlerConstants;
 import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
 import org.openmrs.module.shr.cdahandler.everest.EverestUtil;
@@ -248,7 +248,7 @@ public class HieDocumentExportController {
 
 		try
 		{
-			HealthInformationExchangeService service = Context.getService(HealthInformationExchangeService.class);
+			SanteDbClientService service = Context.getService(SanteDbClientService.class);
 			CdaHandlerConfiguration config = CdaHandlerConfiguration.getInstance();
 
 			DocumentModel docModel = this.buildDocument(pid, encid, (Class<? extends DocumentBuilder>) Class.forName(template));
