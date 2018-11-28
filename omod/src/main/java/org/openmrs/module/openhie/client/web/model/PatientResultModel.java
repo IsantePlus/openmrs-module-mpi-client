@@ -8,7 +8,7 @@ import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PersonName;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.santedb.client.api.SanteDbClientService;
+import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
 
 /**
@@ -123,7 +123,7 @@ public class PatientResultModel {
 			//this.isImported |= pid.getIdentifierType().getName().equals(this.m_configuration.getPatientRoot());
 		}
 		
-		Patient matchedPatient = Context.getService(SanteDbClientService.class).matchWithExistingPatient(result);
+		Patient matchedPatient = Context.getService(MpiClientService.class).matchWithExistingPatient(result);
 		if(matchedPatient != null)
 		{
 			this.isImported = true;

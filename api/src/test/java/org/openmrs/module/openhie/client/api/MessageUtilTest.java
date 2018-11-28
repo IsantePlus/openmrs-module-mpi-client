@@ -6,16 +6,25 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.openmrs.GlobalProperty;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
+import org.openmrs.Person;
+import org.openmrs.PersonAttribute;
+import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
+import org.openmrs.Relationship;
+import org.openmrs.RelationshipType;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.santedb.client.exception.SanteDbClientException;
-import org.openmrs.module.santedb.client.util.MessageUtil;
+import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
+import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
 import org.openmrs.test.BaseModuleContextSensitiveTest;
 
 import ca.uhn.hl7v2.HL7Exception;
@@ -33,6 +42,19 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	@Before
 	public void before()
 	{
+		Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_EXTMAP, "Father's Name:NK1-2-2?NK1-3=FTH,Mother's Name:PID-6-2"));
+		Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_USE_OMRS_RELS, "true"));
+
+		PersonAttributeType pat = new PersonAttributeType();
+		pat.setFormat("java.lang.String");
+		pat.setName("Father's Name");
+		if(Context.getPersonService().getPersonAttributeTypeByName("Father's Name") == null)
+			Context.getPersonService().savePersonAttributeType(pat);
+		pat = new PersonAttributeType();
+		pat.setFormat("java.lang.String");
+		pat.setName("Mother's Name");
+		if(Context.getPersonService().getPersonAttributeTypeByName("Mother's Name") == null)
+			Context.getPersonService().savePersonAttributeType(pat);
 		PatientIdentifierType pit = new PatientIdentifierType();
 		pit.setName("1.2.3.4.5");
 		pit.setDescription("A Test");
@@ -104,7 +126,112 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 		Assert.assertTrue("Expected AD3^^^FOO", message.contains("AD3^^^FOO"));
 		Assert.assertTrue("Expected Smith^John^T^^^^L", message.contains("Smith^John^T^^^^L"));
 	}
+	
+	/**
+	 * Create an Admit Message
+	 * @throws HL7Exception 
+	 */
+	@Test
+	public void testCreateNextOfKin() throws HL7Exception {
+		Patient testPatient = new Patient();
+		testPatient.setGender("F");
+		testPatient.setBirthdate(new Date());
+		testPatient.addName(new PersonName("John", "T", "Smith"));
+		testPatient.getNames().iterator().next().setPreferred(true);
+		PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierTypeByName("1.2.3.4.5.65.6.7");
+		testPatient.addIdentifier(new PatientIdentifier("123", pit, Context.getLocationService().getDefaultLocation()));
+		pit = Context.getPatientService().getPatientIdentifierTypeByName("FOO");
+		testPatient.addIdentifier(new PatientIdentifier("AD3", pit, Context.getLocationService().getDefaultLocation()));
+		testPatient.getPatientIdentifier().setPreferred(true);
+		testPatient = Context.getPatientService().savePatient(testPatient);
+		// Relationship
+		Relationship relationship = new Relationship();
+		RelationshipType relType = Context.getPersonService().getRelationshipTypeByName("Parent/Child");
+		relationship.setRelationshipType(relType);
+		
+		Person relative = new Person();
+		relative.addName(new PersonName("MARY", null, "SMITH"));
+		relative.setGender("F");
+		
+		relationship.setPersonA(relative);
+		relationship.setPersonB(testPatient);
+		Context.getPersonService().savePerson(relative);
+		Context.getPersonService().saveRelationship(relationship);
+		
+		Message admit = MessageUtil.getInstance().createAdmit(testPatient);
+		String message = new PipeParser().encode(admit);
+		Assert.assertTrue("Expected 123^^^&1.2.3.4.5.65.6.7&ISO", message.contains("123^^^&1.2.3.4.5.65.6.7&ISO"));
+		Assert.assertTrue("Expected AD3^^^FOO", message.contains("AD3^^^FOO"));
+		Assert.assertTrue("Expected Smith^John^T^^^^L", message.contains("Smith^John^T^^^^L"));
+		Assert.assertTrue("Expected PAR in NK1", message.contains("PAR"));
+	}
 
+	/**
+	 * Create an Admit Message
+	 * @throws HL7Exception 
+	 */
+	@Test
+	public void testCreateExtension() throws HL7Exception {
+		Patient testPatient = new Patient();
+		testPatient.setGender("F");
+		testPatient.setBirthdate(new Date());
+		testPatient.addName(new PersonName("John", "T", "Smith"));
+		testPatient.getNames().iterator().next().setPreferred(true);
+		PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierTypeByName("1.2.3.4.5.65.6.7");
+		testPatient.addIdentifier(new PatientIdentifier("123", pit, Context.getLocationService().getDefaultLocation()));
+		pit = Context.getPatientService().getPatientIdentifierTypeByName("FOO");
+		testPatient.addIdentifier(new PatientIdentifier("AD3", pit, Context.getLocationService().getDefaultLocation()));
+		testPatient.getPatientIdentifier().setPreferred(true);
+		testPatient.addAttribute(new PersonAttribute(
+				Context.getPersonService().getPersonAttributeTypeByName("Father's Name"),
+				"JUSTIN FYFE"
+		));
+		testPatient = Context.getPatientService().savePatient(testPatient);
+		
+		Message admit = MessageUtil.getInstance().createAdmit(testPatient);
+		String message = new PipeParser().encode(admit);
+		Assert.assertTrue("Expected 123^^^&1.2.3.4.5.65.6.7&ISO", message.contains("123^^^&1.2.3.4.5.65.6.7&ISO"));
+		Assert.assertTrue("Expected AD3^^^FOO", message.contains("AD3^^^FOO"));
+		Assert.assertTrue("Expected Smith^John^T^^^^L", message.contains("Smith^John^T^^^^L"));
+		Assert.assertTrue("Expected PAR in NK1", message.contains("FTH"));
+	}
+	
+	/**
+	 * Create an Admit Message
+	 * @throws HL7Exception 
+	 */
+	@Test
+	public void testCreateTwoExtension() throws HL7Exception {
+		
+
+		Patient testPatient = new Patient();
+		testPatient.setGender("F");
+		testPatient.setBirthdate(new Date());
+		testPatient.addName(new PersonName("John", "T", "Smith"));
+		testPatient.getNames().iterator().next().setPreferred(true);
+		PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierTypeByName("1.2.3.4.5.65.6.7");
+		testPatient.addIdentifier(new PatientIdentifier("123", pit, Context.getLocationService().getDefaultLocation()));
+		pit = Context.getPatientService().getPatientIdentifierTypeByName("FOO");
+		testPatient.addIdentifier(new PatientIdentifier("AD3", pit, Context.getLocationService().getDefaultLocation()));
+		testPatient.getPatientIdentifier().setPreferred(true);
+		testPatient.addAttribute(new PersonAttribute(
+				Context.getPersonService().getPersonAttributeTypeByName("Father's Name"),
+				"JACK SMITH"
+		));
+		testPatient.addAttribute(new PersonAttribute(
+				Context.getPersonService().getPersonAttributeTypeByName("Mother's Name"),
+				"ALLISON SMITH"
+		));
+		testPatient = Context.getPatientService().savePatient(testPatient);
+		
+		Message admit = MessageUtil.getInstance().createAdmit(testPatient);
+		String message = new PipeParser().encode(admit);
+		Assert.assertTrue("Expected 123^^^&1.2.3.4.5.65.6.7&ISO", message.contains("123^^^&1.2.3.4.5.65.6.7&ISO"));
+		Assert.assertTrue("Expected AD3^^^FOO", message.contains("AD3^^^FOO"));
+		Assert.assertTrue("Expected Smith^John^T^^^^L", message.contains("Smith^John^T^^^^L"));
+		Assert.assertTrue("Expected FTH in NK1", message.contains("FTH"));
+		Assert.assertTrue("Expected Mother's name in PID", message.contains("ALLISON"));
+	}
 	/**
 	 * Test the interpretation of the PID segment
 	 * @throws HL7Exception 
@@ -118,13 +245,44 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 		
 		Message mut = new PipeParser().parse(aMessageWithPID);
 		try {
-			List<Patient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
+			List<MpiPatient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
 			Assert.assertEquals(1, pat.size());
 			Assert.assertEquals("RJ-439", pat.get(0).getIdentifiers().iterator().next().getIdentifier());
 			Assert.assertEquals("1.2.3.4.5", pat.get(0).getIdentifiers().iterator().next().getIdentifierType().getName());
 			Assert.assertEquals("F", pat.get(0).getGender());
 			Assert.assertEquals(false, pat.get(0).getBirthdateEstimated());
-		} catch (SanteDbClientException e) {
+		} catch (MpiClientException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	/**
+	 * Test the interpretation of the PID segment
+	 * @throws HL7Exception 
+	 * @throws EncodingNotSupportedException 
+	 */
+	@Test
+	public void testInterpretPidNextOfKin() throws EncodingNotSupportedException, HL7Exception
+	{
+		String aMessageWithPID = "MSH|^~\\&|CR1^^|MOH_CAAT^^|TEST_HARNESS^^|TEST^^|20141104174451||RSP^K23^RSP_K21|TEST-CR-05-10|P|2.5\r" + 
+								"PID|||RJ-439^^^TEST&1.2.3.4.5&ISO||JONES^JENNIFER^^^^^L|SMITH^^^^^^L|19840125|F|||123 Main Street West ^^NEWARK^NJ^30293||^PRN^PH^^^409^3049506||||||\r" +
+								"NK1||SMITH^^^|MTH\r" +
+								"NK1||SMITH^JOHN|FTH";
+		
+
+		Message mut = new PipeParser().parse(aMessageWithPID);
+		try {
+			List<MpiPatient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
+			Assert.assertEquals(1, pat.size());
+			Assert.assertEquals("RJ-439", pat.get(0).getIdentifiers().iterator().next().getIdentifier());
+			Assert.assertEquals("1.2.3.4.5", pat.get(0).getIdentifiers().iterator().next().getIdentifierType().getName());
+			Assert.assertEquals("F", pat.get(0).getGender());
+			Assert.assertEquals(2, pat.get(0).getRelationships().size());
+			Assert.assertEquals(2, pat.get(0).getAttributes().size());
+			Assert.assertEquals(false, pat.get(0).getBirthdateEstimated());
+		} catch (MpiClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -145,10 +303,10 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 		Message mut = new PipeParser().parse(aMessageWithPID);
 		try
 		{
-			List<Patient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
+			List<MpiPatient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
 			Assert.assertEquals(1, pat.size());
 			Assert.assertEquals(2, pat.get(0).getIdentifiers().size());
-		} catch (SanteDbClientException e) {
+		} catch (MpiClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -163,15 +321,16 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	public void testInterpretPidMultiResults() throws EncodingNotSupportedException, HL7Exception
 	{
 		String aMessageWithPID = "MSH|^~\\&|CR1^^|MOH_CAAT^^|TEST_HARNESS^^|TEST^^|20141104174451||RSP^K23^RSP_K21|TEST-CR-05-10|P|2.5\r" + 
-								"PID|||RJ-439^^^TEST&1.2.3.4.5&ISO||JONES^JENNIFER^^^^^L|SMITH^^^^^^L|19840125|F|||123 Main Street West ^^NEWARK^NJ^30293||^PRN^PH^^^409^3049506||||||\r" +
+								"PID|||RJ-439^^^TEST&1.2.3.4.5&ISO||JONES^JENNIFER^^^^^L|SMITH^JENNY^^^^^L|19840125|F|||123 Main Street West ^^NEWARK^NJ^30293||^PRN^PH^^^409^3049506||||||\r" +
 								"PID|||RJ-442^^^FOO||FOSTER^FANNY^FULL^^^^L|FOSTER^MARY^^^^^L|1970|F|||123 W34 St^^FRESNO^CA^3049506||^PRN^PH^^^419^31495|^^PH^^^034^059434|EN|S|||||\r";
 		
 		Message mut = new PipeParser().parse(aMessageWithPID);
 		try
 		{
-			List<Patient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
+			List<MpiPatient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
 			Assert.assertEquals(2, pat.size());
-		} catch (SanteDbClientException e) {
+			Assert.assertEquals(1, pat.get(0).getAttributes().size());
+		} catch (MpiClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

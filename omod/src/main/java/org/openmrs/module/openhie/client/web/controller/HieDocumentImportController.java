@@ -13,9 +13,9 @@ import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.openhie.client.web.model.DocumentModel;
 import org.openmrs.module.openhie.client.web.model.PatientSearchModel;
-import org.openmrs.module.santedb.client.api.SanteDbClientService;
-import org.openmrs.module.santedb.client.exception.SanteDbClientException;
-import org.openmrs.module.santedb.client.hie.model.DocumentInfo;
+import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
+import org.openmrs.module.santedb.mpiclient.exception.SanteDbClientException;
+import org.openmrs.module.santedb.mpiclient.hie.model.DocumentInfo;
 import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
 import org.openmrs.web.controller.PortletController;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +49,7 @@ public class HieDocumentImportController {
 		
 		try
 		{
-			SanteDbClientService service = Context.getService(SanteDbClientService.class);
+			MpiClientService service = Context.getService(MpiClientService.class);
 			CdaHandlerConfiguration config = CdaHandlerConfiguration.getInstance();
 			DocumentInfo docInfo = new DocumentInfo();
 			docInfo.setUniqueId(uuid);
@@ -74,7 +74,7 @@ public class HieDocumentImportController {
 	@RequestMapping(method = RequestMethod.POST)
 	public ModelAndView doImport(Map<String, Object> model, @RequestParam(value = "uuid") String uuid, @RequestParam(value="rep") String rep) throws ParseException
 	{
-		SanteDbClientService hieService = Context.getService(SanteDbClientService.class);
+		MpiClientService hieService = Context.getService(MpiClientService.class);
 		DocumentInfo docInfo = new DocumentInfo();
 		docInfo.setUniqueId(uuid);
 		docInfo.setRepositoryId(rep);

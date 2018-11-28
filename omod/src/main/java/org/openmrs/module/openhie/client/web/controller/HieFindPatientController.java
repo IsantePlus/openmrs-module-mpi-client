@@ -16,8 +16,8 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.openhie.client.web.model.PatientResultModel;
 import org.openmrs.module.openhie.client.web.model.PatientSearchModel;
-import org.openmrs.module.santedb.client.api.SanteDbClientService;
-import org.openmrs.module.santedb.client.exception.SanteDbClientException;
+import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
+import org.openmrs.module.santedb.mpiclient.exception.SanteDbClientException;
 import org.openmrs.web.controller.PortletController;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -57,7 +57,7 @@ public class HieFindPatientController {
 	public ModelAndView doSearch(Map<String, Object> model, @ModelAttribute("patientSearch") PatientSearchModel search) throws ParseException
 	{
 		// Service for the HIE
-		SanteDbClientService service = Context.getService(SanteDbClientService.class);
+		MpiClientService service = Context.getService(MpiClientService.class);
 		Date dobDate = null;
 		boolean isFuzzy = false;
 		PatientIdentifier identifier = null,

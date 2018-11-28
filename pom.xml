@@ -3,11 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.openmrs.module</groupId>
-	<artifactId>openhie-client</artifactId>
-	<version>0.1-SNAPSHOT</version>
+	<artifactId>santedb-mpiclient</artifactId>
+	<version>0.1</version>
 	<packaging>pom</packaging>
-	<name>OpenMRS OpenHIE Client Module</name>
-	<description>Allows OpenMRS to interact with the OpenHIE 1.0 core workflows.</description>
+	<name>OpenMRS MPI Client Module</name>
+	<description>Allows OpenMRS to interact with an IHE PIX MPI.</description>
 
 	<url>https://wiki.openmrs.org/x/FQ4z</url>
 

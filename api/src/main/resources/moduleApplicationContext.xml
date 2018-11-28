@@ -30,16 +30,16 @@
 	<bean parent="serviceContext">
 		<property name="moduleService">
 			<list>
-				<value>${project.parent.groupId}.openhie.client.api.HealthInformationExchangeService</value>
+				<value>${project.parent.groupId}.santedb.mpiclient.api.MpiClientService</value>
 				<bean
 					class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
 					<property name="transactionManager">
 						<ref bean="transactionManager" />
 					</property>
 					<property name="target">
-						<bean class="${project.parent.groupId}.openhie.client.api.impl.HealthInformationExchangeServiceImpl">
+						<bean class="${project.parent.groupId}.santedb.mpiclient.api.impl.MpiClientServiceImpl">
 							<property name="dao">
-								<bean class="${project.parent.groupId}.openhie.client.dao.impl.HibernateHealthInformationExchangeDao">
+								<bean class="${project.parent.groupId}.santedb.mpiclient.dao.impl.HibernateMpiClientDao">
 									<property name="sessionFactory">
 										<ref bean="sessionFactory" />
 									</property>
