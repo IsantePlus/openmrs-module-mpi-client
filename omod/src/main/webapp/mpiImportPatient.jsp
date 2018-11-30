@@ -7,8 +7,8 @@
 <openmrs:htmlInclude file="/scripts/jquery/dataTables/js/jquery.dataTables.min.js"/>
 <openmrs:htmlInclude file="/scripts/jquery-ui/js/openmrsSearch.js" />
 
-<h2>Import HIE Patient</h2>
-<p>TThe remote demographic record will be imported into OpenMRS as the following demographic record:</p>
+<h2>Import MPI Patient</h2>
+<p>The remote demographic record will be imported into OpenMRS as the following demographic record:</p>
 
 <form id="importForm" modelAttribute="importPatient" method="post"
 			enctype="multipart/form-data">

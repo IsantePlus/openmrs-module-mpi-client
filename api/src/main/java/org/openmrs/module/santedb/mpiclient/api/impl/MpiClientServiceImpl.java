@@ -16,6 +16,11 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dcm4che3.audit.AuditMessage;
+import org.dcm4che3.audit.AuditMessages;
+import org.dcm4che3.net.Connection;
+import org.dcm4che3.net.Device;
+import org.dcm4che3.net.audit.AuditLogger;
+import org.dcm4che3.net.audit.AuditRecordRepository;
 import org.marc.everest.datatypes.II;
 import org.marc.everest.formatters.interfaces.IXmlStructureFormatter;
 import org.openmrs.Encounter;
@@ -28,7 +33,6 @@ import org.openmrs.Visit;
 import org.openmrs.api.DuplicateIdentifierException;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
-import org.openmrs.module.santedb.mpiclient.api.AtnaAuditService;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
@@ -36,8 +40,14 @@ import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.util.AuditUtil;
 import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
+
+import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.Message;
+import ca.uhn.hl7v2.model.v231.datatype.ED;
+import ca.uhn.hl7v2.model.v231.datatype.ELD;
+import ca.uhn.hl7v2.model.v231.message.ACK;
 import ca.uhn.hl7v2.model.v25.message.QBP_Q21;
+import ca.uhn.hl7v2.parser.PipeParser;
 import ca.uhn.hl7v2.util.Terser;
 
 /**
@@ -48,6 +58,11 @@ import ca.uhn.hl7v2.util.Terser;
 public class MpiClientServiceImpl extends BaseOpenmrsService
 		implements MpiClientService {
 
+	// Lock object
+	
+	private Object m_lockObject = new Object();
+	// Audit logger
+	protected AuditLogger m_logger = null;
 	// Log
 	private static Log log = LogFactory.getLog(MpiClientServiceImpl.class);
 	// Message utility
@@ -148,7 +163,6 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			}
 		}
 			
-		AtnaAuditService auditSvc= Context.getService(AtnaAuditService.class);
 		AuditMessage auditMessage = null;
 		Message pdqRequest = null;
 		
@@ -160,12 +174,24 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			
 			Terser terser = new Terser(response);
 			if(!terser.get("/MSA-1").endsWith("A"))
-				throw new MpiClientException("Error querying data");
+				throw new MpiClientException(String.format("Error querying data :> %s", terser.get("/MSA-1")), response);
 			
 			
 			List<MpiPatient> retVal = this.m_messageUtil.interpretPIDSegments(response);
 			auditMessage = AuditUtil.getInstance().createPatientSearch(retVal, this.m_configuration.getPdqEndpoint(), (QBP_Q21)pdqRequest);
 			return retVal;
+		}
+		catch(MpiClientException e)
+		{
+			log.error("Error in PDQ Search", e);
+			if(e.getResponseMessage() != null)
+				try {
+					log.error(new PipeParser().encode(e.getResponseMessage()));
+				} catch (HL7Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			throw e;
 		}
 		catch(Exception e)
 		{
@@ -183,7 +209,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		{
 			if(auditMessage != null)
 				try {
-					auditSvc.getLogger().write(Calendar.getInstance(), auditMessage);
+					this.getAuditLogger().write(Calendar.getInstance(), auditMessage);
 				} catch (Exception e) {
 					log.error(e);
 				}
@@ -199,11 +225,15 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 
 		Map<String, String> queryParameters = new HashMap<String, String>();
 		queryParameters.put("@PID.3.1", identifier);
-		queryParameters.put("@PID.3.4.2", assigningAuthority);
-		queryParameters.put("@PID.3.4.3", "ISO");
+		
+		if(assigningAuthority.matches("^(\\d+?\\.){1,}\\d+$")) {
+			queryParameters.put("@PID.3.4.2", assigningAuthority);
+			queryParameters.put("@PID.3.4.3", "ISO");
+		}
+		else 
+			queryParameters.put("@PID.3.4.1", assigningAuthority);
 
 		// Auditing stuff
-		AtnaAuditService auditSvc= Context.getService(AtnaAuditService.class);
 		AuditMessage auditMessage = null;
 		Message request = null;
 		
@@ -211,6 +241,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		{
 			request = this.m_messageUtil.createPdqMessage(queryParameters);
 			Message response = this.m_messageUtil.sendMessage(request, this.m_configuration.getPdqEndpoint(), this.m_configuration.getPdqPort());
+			
+			Terser terser = new Terser(response);
+			if(!terser.get("/MSA-1").endsWith("A"))
+				throw new MpiClientException(String.format("Error retrieving data :> %s", terser.get("/MSA-1")), response);
 			
 			List<MpiPatient> pats = this.m_messageUtil.interpretPIDSegments(response);
 			auditMessage = AuditUtil.getInstance().createPatientSearch(pats, this.m_configuration.getPdqEndpoint(), (QBP_Q21)request);
@@ -221,6 +255,18 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 				return null;
 			else
 				return pats.get(0);
+		}
+		catch(MpiClientException e)
+		{
+			log.error("Error in PDQ Search", e);
+			if(e.getResponseMessage() != null)
+				try {
+					log.error(new PipeParser().encode(e.getResponseMessage()));
+				} catch (HL7Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			throw e;
 		}
 		catch(Exception e)
 		{
@@ -240,7 +286,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		{
 			if(auditMessage != null)
 				try {
-					auditSvc.getLogger().write(Calendar.getInstance(), auditMessage);
+					this.getAuditLogger().write(Calendar.getInstance(), auditMessage);
 				} catch (Exception e) {
 					log.error(e);
 				}
@@ -263,6 +309,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			for(PatientIdentifier id : patient.getIdentifiers())
 			{
 				boolean hasId = false;
+				if(id.getIdentifierType() == null) continue ;
 				for(PatientIdentifier eid : patientRecord.getIdentifiers())
 					hasId |= eid.getIdentifier().equals(id.getIdentifier()) && eid.getIdentifierType().getId().equals(id.getIdentifierType().getId());
 				if(!hasId)
@@ -289,13 +336,15 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		else
 		{
 			boolean isPreferred = false;
-			for(PatientIdentifier id : patient.getIdentifiers())
-				if(id.getIdentifierType().getName().equals(this.m_configuration.getPreferredPatientIdRoot()) ||
-						id.getIdentifierType().getUuid().equals(this.m_configuration.getPreferredPatientIdRoot()))
-				{
-					id.setPreferred(true);
-					isPreferred = true;
-				}
+			
+			PatientIdentifier ecidPid = null;
+			
+			for(PatientIdentifier id : patient.getIdentifiers()) {
+				if(id.getIdentifierType() == null)
+					ecidPid = id;
+				isPreferred |= id.getPreferred();
+			}
+			patient.removeIdentifier(ecidPid);
 			
 			if(!isPreferred)
 				patient.getIdentifiers().iterator().next().setPreferred(true);
@@ -323,12 +372,12 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	/**
 	 * Export a patient to the HIE
 	 * @throws MpiClientException 
+	 * @throws HL7Exception 
 	 */
 	public void exportPatient(Patient patient) throws MpiClientException {
 		// TODO Auto-generated method stub
 		
 		Message admitMessage = null;
-		AtnaAuditService auditSvc = Context.getService(AtnaAuditService.class);
 		AuditMessage auditMessage = null;
 
 		try
@@ -338,9 +387,28 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			
 			Terser terser = new Terser(response);
 			if(!terser.get("/MSA-1").endsWith("A"))
-				throw new MpiClientException("Error querying data");
+				throw new MpiClientException(String.format("Error from MPI :> %s", terser.get("/MSA-1")), response);
 			auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, true);
 
+		}
+		catch(MpiClientException e)
+		{
+			log.error("Error in PIX message", e);
+			if(e.getResponseMessage() != null) {
+				try {
+					log.error(new PipeParser().encode(e.getResponseMessage()));
+					ACK ack = ((ACK)e.getResponseMessage());
+					for(ELD erd : ack.getERR().getErrorCodeAndLocation())
+					{
+						log.error(String.format("MPI Error: %s : %s", erd.getCodeIdentifyingError().getIdentifier().getValue(), erd.getCodeIdentifyingError().getText().getValue()));
+					}
+					throw new MpiClientException(ack.getERR().getErrorCodeAndLocation(0).getCodeIdentifyingError().getText().getValue(), e);
+				} catch (HL7Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+			throw e;
 		}
 		catch(Exception e)
 		{
@@ -355,7 +423,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			if(auditMessage != null)
 				try
 				{
-					auditSvc.getLogger().write(Calendar.getInstance(), auditMessage);
+					this.getAuditLogger().write(Calendar.getInstance(), auditMessage);
 				}
 				catch(Exception e)
 				{
@@ -372,7 +440,6 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	public PatientIdentifier resolvePatientIdentifier(Patient patient,
 			String toAssigningAuthority) throws MpiClientException {
 		
-		AtnaAuditService auditSvc = Context.getService(AtnaAuditService.class);
 		AuditMessage auditMessage = null;
 
 		Message request = null;
@@ -402,7 +469,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			if(auditMessage != null)
 				try
 				{
-					auditSvc.getLogger().write(Calendar.getInstance(), auditMessage);
+					this.getAuditLogger().write(Calendar.getInstance(), auditMessage);
 				}
 				catch(Exception e)
 				{
@@ -418,8 +485,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	public Patient matchWithExistingPatient(Patient remotePatient) {
 		Patient candidate = null;
 		// Does this patient have an identifier from our assigning authority?
-		for(PatientIdentifier pid : remotePatient.getIdentifiers())
-			if(pid.getIdentifierType().getName().equals(this.m_configuration.getLocalPatientIdRoot()))
+		for(PatientIdentifier pid : remotePatient.getIdentifiers()) {
+			if(pid.getIdentifierType() == null) continue;
+			String domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName());
+			if(this.m_configuration.getLocalPatientIdRoot().equals(domain))
 				try
 				{
 					candidate = Context.getPatientService().getPatient(Integer.parseInt(pid.getIdentifier()));
@@ -428,7 +497,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 				{
 					
 				}
-		
+		}
 		// This patient may be an existing patient, so we just don't want to add it!
 		if(candidate == null)
 			for(PatientIdentifier pid : remotePatient.getIdentifiers())
@@ -448,7 +517,6 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	public void updatePatient(Patient patient) throws MpiClientException {
 		
 		// TODO Auto-generated method stub
-		AtnaAuditService auditSvc = Context.getService(AtnaAuditService.class);
 		AuditMessage auditMessage = null;
 
 		Message admitMessage = null;
@@ -459,10 +527,22 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			
 			Terser terser = new Terser(response);
 			if(!terser.get("/MSA-1").endsWith("A"))
-				throw new MpiClientException("Error querying data");
+				throw new MpiClientException(String.format("Error querying data :> %s", terser.get("/MSA-1")), response);
 			auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, true);
 
 
+		}
+		catch(MpiClientException e)
+		{
+			log.error("Error in PIX message", e);
+			if(e.getResponseMessage() != null)
+				try {
+					log.error(new PipeParser().encode(e.getResponseMessage()));
+				} catch (HL7Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			throw e;
 		}
 		catch(Exception e)
 		{
@@ -477,7 +557,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			if(auditMessage != null)
 				try
 				{
-					auditSvc.getLogger().write(Calendar.getInstance(), auditMessage);
+					this.getAuditLogger().write(Calendar.getInstance(), auditMessage);
 				}
 				catch(Exception e)
 				{
@@ -486,5 +566,67 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		}	
 		
     }
+	
+	/**
+	 * Get Audit logger
+	 */
+	public AuditLogger getAuditLogger() {
+		if(this.m_logger == null)
+		{
+			synchronized (this.m_lockObject) {
+	            if(this.m_logger == null)
+	            {
+            		this.m_configuration = MpiClientConfiguration.getInstance();	
+            		this.m_logger = this.createLoggerDevice().getDeviceExtension(AuditLogger.class);
+	            }
+            }
+		}
+		return this.m_logger;
+	}
 
+	/**
+	 * Create logger device
+	 */
+	private Device createLoggerDevice() { 
+		Device device = new Device(String.format("%s^^^%s", this.m_configuration.getLocalApplication(), this.m_configuration.getLocalFacility()));
+
+		
+		Connection transportConnection = new Connection(this.m_configuration.getAuditRepositoryTransport(), this.m_configuration.getAuditRepositoryEndpoint());
+		
+		// UDP
+		if("audit-udp".equals(transportConnection.getCommonName()))
+		{
+			transportConnection.setClientBindAddress("0.0.0.0");
+			transportConnection.setProtocol(Connection.Protocol.SYSLOG_UDP);
+		}
+		else if("audit-tcp".equals(transportConnection.getCommonName()))
+		{
+			transportConnection.setProtocol(Connection.Protocol.DICOM);
+		}
+		else if("audit-tls".equals(transportConnection.getCommonName()))
+		{
+			transportConnection.setProtocol(Connection.Protocol.SYSLOG_TLS);
+			transportConnection.setTlsCipherSuites("TLS_RSA_WITH_AES_128_CBC_SHA");
+		}
+		else
+			throw new IllegalArgumentException("Connection must be audit-tls or audit-udp");
+
+		transportConnection.setPort(this.m_configuration.getAuditRepositoryPort());
+		
+		device.addConnection(transportConnection);
+		
+		AuditRecordRepository repository = new AuditRecordRepository();
+		device.addDeviceExtension(repository);
+		repository.addConnection(transportConnection);
+
+		AuditLogger logger = new AuditLogger();
+		device.addDeviceExtension(logger);
+		logger.addConnection(transportConnection);
+		logger.setAuditRecordRepositoryDevice(device);
+		logger.setSchemaURI(AuditMessages.SCHEMA_URI);
+		
+		return device;
+		
+	}
+	
 }

@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dcm4che3.audit.ActiveParticipant;
@@ -187,9 +186,16 @@ public class AuditUtil {
 				if(res == null ||
 						res.getPatientIdentifier() == null)
 					continue;
+				
+				String domain = null;
+				if(res.getPatientIdentifier().getIdentifierType() != null)
+					domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(res.getPatientIdentifier().getIdentifierType().getName());
+				else 
+					domain = this.m_configuration.getEnterprisePatientIdRoot();
+				
 				retVal.getParticipantObjectIdentification().add(
 					AuditMessages.createParticipantObjectIdentification(
-							String.format("%s^^^&%s&ISO", res.getPatientIdentifier().getIdentifier(), res.getPatientIdentifier().getIdentifierType().getUuid()), 
+							String.format("%s^^^&%s&ISO", res.getPatientIdentifier().getIdentifier(), domain), 
 							ParticipantObjectIDTypeCode.PatientNumber, 
 							null, 
 							null, 
@@ -249,9 +255,16 @@ public class AuditUtil {
 					if(res == null ||
 							res.getPatientIdentifier() == null)
 						continue;
+					
+					String domain = null;
+					if(res.getPatientIdentifier().getIdentifierType() != null)
+						domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(res.getPatientIdentifier().getIdentifierType().getName());
+					else 
+						domain = this.m_configuration.getEnterprisePatientIdRoot();
+					
 					retVal.getParticipantObjectIdentification().add(
 						AuditMessages.createParticipantObjectIdentification(
-								String.format("%s^^^&%s&ISO", res.getPatientIdentifier().getIdentifier(), res.getPatientIdentifier().getIdentifierType().getUuid()), 
+								String.format("%s^^^&%s&ISO", res.getPatientIdentifier().getIdentifier(), domain), 
 								ParticipantObjectIDTypeCode.PatientNumber, 
 								null, 
 								null, 

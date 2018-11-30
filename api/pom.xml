@@ -4,14 +4,13 @@
 	<parent>
 		<groupId>org.openmrs.module</groupId>
 		<artifactId>santedb-mpiclient</artifactId>
-		<version>0.1</version>
+		<version>0.4</version>
 	</parent>
 
 	<artifactId>santedb-mpiclient-api</artifactId>
 	<packaging>jar</packaging>
 	<name>SanteDB MPIClient API</name>
 	<description>API project for MPI Client Module</description>
-
 	<dependencies>
 		<!-- 
 		Add other dependencies from lib:

@@ -5,14 +5,14 @@
 	<!-- Base Module Properties -->
 	<id>${project.parent.artifactId}</id>
 	<name>${project.parent.name}</name>
-	<version>${project.parent.version}.3</version>
+	<version>${project.parent.version}</version>
 	<package>${project.parent.groupId}.${project.parent.artifactId}</package>
 	<author>Fyfe Software Inc.</author>
 	<description>
 			${project.parent.description}
 	</description>
 
-	<activator>${project.parent.groupId}.openhie.client.HealthInformationExchangeClientActivator</activator>
+	<activator>${project.parent.groupId}.santedb.mpiclient.MpiClientActivator</activator>
 	
 	<!-- <updateURL>https://modules.openmrs.org/modules/download/@MODULE_ID@/update.rdf</updateURL> -->
 	<!-- /Base Module Properties -->
@@ -25,17 +25,9 @@
 
 		
 	<!-- Extensions -->
-	<!--  <extension>
-		<point>org.openmrs.patientDashboardTab</point>
-		<class>${project.parent.groupId}.openhie.client.extension.html.DocumentConsumerTab</class>
-	</extension>
- 	<extension>
-		<point>org.openmrs.patientDashboardTab</point>
-		<class>${project.parent.groupId}.openhie.client.extension.html.VaccinationInformationTab</class>
-	</extension>-->
 	<extension>
 		<point>org.openmrs.gutter.tools</point>
-		<class>${project.parent.groupId}.openhie.client.extension.html.HealthInformationExchangeLink</class>
+		<class>${project.parent.groupId}.santedb.mpiclient.extension.html.MpiClientLink</class>
 	</extension>
 	
 	<advice>
@@ -180,7 +172,21 @@
 		<description>PersonAttributes (in OpenMRS) you would like imported from the message. Format= attr_name:segment_path?segment_guard=guard_value, . For example, to copy NK1-2-2 to fathers name: Father's Name=NK1-2-2?NK1-3=FTH</description>
 	</globalProperty>		
 	
-	
+    <globalProperty>
+		<property>mpi-client.pid.nameRewriteRegex</property>
+		<defaultValue></defaultValue>
+		<description>Identifies the regex that should be used to rewrite names. For example to extract the first prefix in Myanmar: /^(ma|mg|daw)?(.*)$/^$2^^^$1</description>
+	</globalProperty>
+    <globalProperty>
+		<property>mpi-client.pid.exportIdentitiferType</property>
+		<defaultValue></defaultValue>
+		<description>When specified, indicates the patient identifier types and domains that should be exported (example: HIV Programme ID=HIV_ID)</description>
+	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.pid.defaultCountry</property>
+		<defaultValue></defaultValue>
+		<description>When specified, sets the default country code to use when no country code is present</description>
+	</globalProperty>
 		<!--
 	<dwr>
 		<allow>

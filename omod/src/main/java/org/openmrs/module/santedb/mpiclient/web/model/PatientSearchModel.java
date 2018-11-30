@@ -1,4 +1,4 @@
-package org.openmrs.module.openhie.client.web.model;
+package org.openmrs.module.santedb.mpiclient.web.model;
 
 /**
  * Patient Search model

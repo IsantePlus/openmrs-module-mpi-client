@@ -1,4 +1,4 @@
-package org.openmrs.module.openhie.client.web.controller;
+package org.openmrs.module.santedb.mpiclient.web.controller;
 
 import java.text.ParseException;
 import java.util.Map;
@@ -7,10 +7,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.openhie.client.web.model.PatientSearchModel;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
-import org.openmrs.module.santedb.mpiclient.exception.SanteDbClientException;
-import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
+import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
+import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.web.model.PatientSearchModel;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -20,8 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 @Controller
-@RequestMapping("/module/openhie-client/hieImportPatient")
-public class HieImportPatientController {
+@RequestMapping("/module/santedb-mpiclient/mpiImportPatient")
+public class MpiImportPatientController {
 
 	protected final Log log = LogFactory.getLog(this.getClass());
 	/**
@@ -38,15 +39,15 @@ public class HieImportPatientController {
 		try
 		{
 			MpiClientService service = Context.getService(MpiClientService.class);
-			CdaHandlerConfiguration config = CdaHandlerConfiguration.getInstance();
-			model.put("patient", service.getPatient(ecid, config.getEcidRoot()));
-			return new ModelAndView("/module/openhie-client/hieImportPatient", model);
+			MpiClientConfiguration config = MpiClientConfiguration.getInstance();
+			model.put("patient", service.getPatient(ecid, config.getEnterprisePatientIdRoot()));
+			return new ModelAndView("/module/santedb-mpiclient/mpiImportPatient", model);
 		}
-		catch(SanteDbClientException e) {
+		catch(MpiClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			model.put("error", e.getMessage());
-			return new ModelAndView("/module/openhie-client/hieImportPatient", model);
+			return new ModelAndView("/module/santedb-mpiclient/mpiImportPatient", model);
 		}
 	}
 	
@@ -65,16 +66,16 @@ public class HieImportPatientController {
 		{
 			// Service for the HIE
 			MpiClientService service = Context.getService(MpiClientService.class);
-			CdaHandlerConfiguration config = CdaHandlerConfiguration.getInstance();
-			Patient pat = service.getPatient(ecid, config.getEcidRoot());
-			pat = service.importPatient(pat);
-			return new ModelAndView("redirect:/patientDashboard.form?patientId=" + pat.getId().toString() );
+			MpiClientConfiguration config = MpiClientConfiguration.getInstance();
+			MpiPatient pat = service.getPatient(ecid, config.getEnterprisePatientIdRoot());
+			Patient createdPat = service.importPatient(pat);
+			return new ModelAndView("redirect:/patientDashboard.form?patientId=" + createdPat.getId().toString() );
 		}
-		catch(SanteDbClientException e) {
+		catch(MpiClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			model.put("error", e.getMessage());
-			return new ModelAndView("/module/openhie-client/hieImportPatient", model);
+			return new ModelAndView("/module/santedb-mpiclient/mpiImportPatient", model);
 		}
 	}
 }

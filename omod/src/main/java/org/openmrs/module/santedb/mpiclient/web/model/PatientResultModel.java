@@ -1,4 +1,4 @@
-package org.openmrs.module.openhie.client.web.model;
+package org.openmrs.module.santedb.mpiclient.web.model;
 
 import java.text.SimpleDateFormat;
 
@@ -9,7 +9,8 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.PersonName;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
-import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
+import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 
 /**
  * Represents a result of a patient search 
@@ -17,7 +18,7 @@ import org.openmrs.module.shr.cdahandler.configuration.CdaHandlerConfiguration;
 public class PatientResultModel {
 	
 	// Get the CDA handler configuration
-	CdaHandlerConfiguration m_configuration = CdaHandlerConfiguration.getInstance();
+	MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 	private final Log log = LogFactory.getLog(this.getClass());
 	
 	// Name
@@ -96,7 +97,7 @@ public class PatientResultModel {
 	/**
 	 * Create a result from the model
 	 */
-	public PatientResultModel(Patient result)
+	public PatientResultModel(MpiPatient result)
 	{
 		for(PersonName pn : result.getNames())
 		{
@@ -109,9 +110,7 @@ public class PatientResultModel {
 		this.dateOfBirth = new SimpleDateFormat("yyyy-MMM-dd").format(result.getBirthdate());
 		for(PatientIdentifier pid : result.getIdentifiers())
 		{
-			log.error(pid.getIdentifierType().getName());
-			if(pid.getIdentifierType().getName().equals(this.m_configuration.getEcidRoot()) ||
-					pid.getIdentifierType().getUuid().equals(this.m_configuration.getEcidRoot()))
+			if(pid.getIdentifierType() == null)
 				this.ecid = pid.getIdentifier();
 			else if(this.identifier == null)
 				this.identifier = String.format("%s (%s)", pid.getIdentifier(), pid.getIdentifierType().getDescription());

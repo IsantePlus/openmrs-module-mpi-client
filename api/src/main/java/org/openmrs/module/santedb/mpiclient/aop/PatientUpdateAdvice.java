@@ -1,14 +1,21 @@
 package org.openmrs.module.santedb.mpiclient.aop;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.marc.everest.datatypes.TS;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
+import org.openmrs.PatientIdentifierType;
+import org.openmrs.PersonAttribute;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.santedb.mpiclient.MpiClientActivator;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
@@ -30,35 +37,66 @@ public class PatientUpdateAdvice implements AfterReturningAdvice {
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
 		if(method.getName().equals("savePatient") && target instanceof PatientService)
 		{
-			log.debug("Sending update to the MPI for new patient data...");
+			log.info("Sending update to the MPI for new patient data...");
 			try
 			{
 				Patient patient = (Patient)returnValue;
-				// Does this patient have an ECID? 
-				boolean hasEcid = false;
-				for(PatientIdentifier pid : patient.getIdentifiers())
-					hasEcid |= pid.getIdentifierType().getName().equals(this.m_configuration.getEnterprisePatientIdRoot()) ||
-							pid.getIdentifierType().getUuid().equals(this.m_configuration.getEnterprisePatientIdRoot());
-						
 				MpiClientService hieService = Context.getService(MpiClientService.class);
-				if(hasEcid && patient.getDateChanged() != null) // notify update
-				{
-					hieService.updatePatient(patient);
-					hieService.synchronizePatientEnterpriseId(patient);
+
+				hieService.exportPatient(patient);
+		
+				// Grab the national health ID for the patient
+				if(!this.m_configuration.getNationalPatientIdRoot().isEmpty()) {
+					
+					// Find the value for the NHID
+					HashMap<String, String> identifierMaps = this.m_configuration.getLocalPatientIdentifierTypeMap();
+					PatientIdentifierType pit = null;
+					for(String key : identifierMaps.keySet())
+						if(this.m_configuration.getNationalPatientIdRoot().equals(identifierMaps.get(key)))
+						{
+							pit = Context.getPatientService().getPatientIdentifierTypeByName(key);
+							break;
+						}
+					
+					if(pit != null && patient.getPatientIdentifier(pit) == null &&
+							patient.getPatientIdentifier(pit) == null) {
+						PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, this.m_configuration.getNationalPatientIdRoot());
+						Context.getPatientService().savePatientIdentifier(pid);
+					}
 				}
-				else if(!hasEcid) // create case
-				{
-					hieService.exportPatient(patient);
-					PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, this.m_configuration.getEnterprisePatientIdRoot());
-					patient.addIdentifier(pid);
-					patient.setDateChanged(new Date());
-					Context.getPatientService().savePatient(patient);
-				}
+				
 			}
 			catch(MpiClientException e)
 			{
 				log.error(e);
+				throw e;
 			}
+		}
+		else if(method.getName().equals("mergePatients") && target instanceof PatientService) {
+			// TODO:
+//			log.info("Sending patient merge to the MPI ...");
+//			try
+//			{
+//				
+//				Patient survivor = (Patient)returnValue;
+//				List<Patient> nonSurvivors = null;
+//				if(args[1] instanceof List)
+//					nonSurvivors = (List<Patient>)args[1];
+//				else if(args[1] instanceof Patient) {
+//					nonSurvivors = new ArrayList<Patient>();
+//					nonSurvivors.add((Patient)args[1]);
+//				}
+//				
+//				MpiClientService hieService = Context.getService(MpiClientService.class);
+//
+//				//hieService.mergePatient(survivor, nonSurvivors);
+//				
+//			}
+//			catch(MpiClientException e)
+//			{
+//				log.error(e);
+//				throw e;
+//			}
 		}
 	}
 	

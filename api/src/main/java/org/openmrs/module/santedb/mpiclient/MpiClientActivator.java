@@ -15,6 +15,7 @@ package org.openmrs.module.santedb.mpiclient;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.PersonAttributeType;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.ModuleActivator;
 
@@ -52,6 +53,7 @@ public class MpiClientActivator implements ModuleActivator {
 	 * @see ModuleActivator#started()
 	 */
 	public void started() {		
+
 		log.info("MPI Interface Module started");
 	}
 	

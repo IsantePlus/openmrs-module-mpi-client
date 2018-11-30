@@ -4,7 +4,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>santedb-mpiclient</artifactId>
-	<version>0.1</version>
+	<version>0.4</version>
 	<packaging>pom</packaging>
 	<name>OpenMRS MPI Client Module</name>
 	<description>Allows OpenMRS to interact with an IHE PIX MPI.</description>
@@ -70,7 +70,7 @@
 	</dependencyManagement>
 
 	<properties>
-		<openMRSVersion>1.11.3</openMRSVersion>
+		<openMRSVersion>1.9.8</openMRSVersion>
 	</properties>
 
 	<build>

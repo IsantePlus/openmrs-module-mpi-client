@@ -3,6 +3,7 @@ package org.openmrs.module.santedb.mpiclient.api;
 import java.util.Date;
 import java.util.List;
 
+import org.dcm4che3.net.audit.AuditLogger;
 import org.openmrs.Encounter;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
@@ -69,6 +70,10 @@ public interface MpiClientService extends OpenmrsService {
 	 */
 	public void updatePatient(Patient patient) throws MpiClientException;
 
+	/**
+	 * Get the audit logger
+	 */
+	public AuditLogger getAuditLogger();
 	
 	
 }

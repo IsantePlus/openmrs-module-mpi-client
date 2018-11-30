@@ -3,6 +3,8 @@ package org.openmrs.module.santedb.mpiclient.configuration;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.marc.everest.formatters.FormatterUtil;
 import org.openmrs.GlobalProperty;
 import org.openmrs.api.context.Context;
@@ -18,6 +20,12 @@ public class MpiClientConfiguration {
 	private static final Object s_lockObject = new Object();
 	// Singleton
 	private static MpiClientConfiguration s_instance;
+	
+	// Local identifier map
+	private HashMap<String, String> m_localIdentifierMap;
+	
+	
+	private final Log log = LogFactory.getLog(this.getClass());
 	
 	public static final String PROP_NAME_PDQ_EP = "mpi-client.endpoint.pdq.addr";
 	public static final String PROP_NAME_PDQ_EP_PORT = "mpi-client.endpoint.pdq.port";
@@ -46,6 +54,10 @@ public class MpiClientConfiguration {
 
 	public static final String PROP_NAME_EXTMAP = "mpi-client.ext.extendedAttributes";
 	public static final String PROP_NAME_USE_OMRS_RELS = "mpi-client.ext.storeNK1AsRelationships";
+
+	public static final String PROP_NAME_ID_EXPORT_TYPE = "mpi-client.pid.exportIdentitiferType";
+	public static final String PROP_NAME_PAT_NAME_REWRITE = "mpi-client.pid.nameRewriteRegex";
+	public static final String PROP_NAME_DEFAULT_COUNTRY = "mpi-client.pid.defaultCountry";
 	
     private Map<String, Object> m_cachedProperties = new HashMap<String, Object>();
 
@@ -62,6 +74,7 @@ public class MpiClientConfiguration {
 		else 
 		{
 			String propertyValue = Context.getAdministrationService().getGlobalProperty(propertyName);
+			this.log.info(String.format("Loaded MPI property: %s", propertyValue));
 			if(propertyValue != null && !propertyValue.isEmpty())
 			{
 				T value = (T)FormatterUtil.fromWireFormat(propertyValue, defaultValue.getClass()); 
@@ -104,6 +117,12 @@ public class MpiClientConfiguration {
 		return s_instance;
 	}
 	
+	/**
+	 * Clears cached properties
+	 */
+	public void clearCache() {
+		this.m_cachedProperties.clear();
+	}
 	
 	/**
 	 * Get the enterprise patient identifier root
@@ -111,6 +130,14 @@ public class MpiClientConfiguration {
 	 */
 	public String getEnterprisePatientIdRoot() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_ENT_ID, "ENTID");
+	}
+	
+	/**
+	 * Get the default country
+	 * @return
+	 */
+	public String getDefaultCountry() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_DEFAULT_COUNTRY, "");
 	}
 	
 	/**
@@ -125,8 +152,30 @@ public class MpiClientConfiguration {
 	 * Get the enterprise patient identifier root
 	 * @return
 	 */
-	public String getPreferredPatientIdRoot() {
+	public String getNationalPatientIdRoot() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_PREF_ID, "NAT_HEALTH_ID");
+	}
+
+	/**
+	 * Get the enterprise patient identifier root
+	 * @return
+	 */
+	public HashMap<String, String> getLocalPatientIdentifierTypeMap() {
+		
+		if(this.m_localIdentifierMap == null) {
+			String exportType = this.getOrCreateGlobalProperty(PROP_NAME_ID_EXPORT_TYPE, "");
+			this.m_localIdentifierMap = new HashMap<String, String>();
+			if(exportType != null && !exportType.isEmpty())
+				for(String st : exportType.split(","))
+				{
+					String[] dat = st.split("=");
+					this.log.info(String.format("MPI Identifier Mapping: %s = %s", dat[0], dat[1]));
+					this.m_localIdentifierMap.put(dat[0], dat[1]);
+				}
+			else 
+				this.log.warn("No MPI identifier maps found");
+		}
+		return this.m_localIdentifierMap;
 	}
 
     /**
@@ -254,5 +303,7 @@ public class MpiClientConfiguration {
      * @return
      */
     public boolean getAutoUpdateLocalPatientIdentifierTypes() { return this.getOrCreateGlobalProperty(PROP_NAME_AUTO_PIT, false); }
+    
+    public String getNameRewriteRule() { return this.getOrCreateGlobalProperty(PROP_NAME_PAT_NAME_REWRITE, ""); }
 
 }

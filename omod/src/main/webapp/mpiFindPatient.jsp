@@ -14,14 +14,13 @@
 	<div class="box">
 		This will search the Health Information Exchange for patients matching your query parameters. Note, the results from this result may not exist in your local OpenMRS instance but can be imported.
 		<form id="importForm" modelAttribute="patientSearch" method="post"
-			enctype="multipart/form-data">
+		onsubmit="document.getElementById('searchSubmit').disabled = true; "
+			enctype="application/x-www-form-urlencoded">
 			
 			<table>
 				<tr>
-					<td>Family Name:</td>
-					<td><input type="text" name="familyName" value="${patientSearch.familyName }" /></td>
-					<td>Given Name:</td>
-					<td><input type="text" name="givenName"  value="${patientSearch.givenName }"/></td>
+					<td>Name:</td>
+					<td colspan="3"><input style="width:100%" type="text" name="givenName" value="${patientSearch.givenName }" /></td>
 				</tr>
 				<tr>
 					<td>Date of Birth:</td>
@@ -38,7 +37,7 @@
 					<td colspan="3"><input type="text" name="identifier" value="${patientSearch.identifier }"/><input type="checkbox" name="momsId" id="momsId" value="true" <c:if test='${patientSearch.momsId == "true" }'>checked="checked"</c:if>/><label for="momsId"> Mother's Identifier</label></td>
 				</tr>
 			</table>
-			<br /> <input type="submit" value="Search"> <br />
+			<br /> <input id="searchSubmit"   type="submit" value="Search"> <br />
 		</form>
 	</div>
 	
@@ -67,7 +66,7 @@
 								<a href="${viewPatientUrl }?patientId=${patient.openMrsId }">View</a>
 							</c:when>
 							<c:otherwise>
-								<c:url var="importPatientUrl" value="/module/openhie-client/hieImportPatient.form"/>
+								<c:url var="importPatientUrl" value="/module/santedb-mpiclient/mpiImportPatient.form"/>
 								<a href="${importPatientUrl }?ecid=${patient.ecid}">Import</a>
 							</c:otherwise>
 						</c:choose>

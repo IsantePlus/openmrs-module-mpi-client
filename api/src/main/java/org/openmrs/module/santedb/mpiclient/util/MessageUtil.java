@@ -3,6 +3,8 @@ package org.openmrs.module.santedb.mpiclient.util;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +40,9 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.util.OpenmrsConstants;
+import org.springframework.beans.factory.xml.NamespaceHandlerResolver;
+
+import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.app.Connection;
@@ -45,11 +50,14 @@ import ca.uhn.hl7v2.app.ConnectionHub;
 import ca.uhn.hl7v2.app.Initiator;
 import ca.uhn.hl7v2.llp.LLPException;
 import ca.uhn.hl7v2.llp.MinLowerLayerProtocol;
+import ca.uhn.hl7v2.model.AbstractPrimitive;
+import ca.uhn.hl7v2.model.Composite;
 import ca.uhn.hl7v2.model.DataTypeException;
 import ca.uhn.hl7v2.model.Group;
 import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.model.Segment;
 import ca.uhn.hl7v2.model.Structure;
+import ca.uhn.hl7v2.model.Type;
 import ca.uhn.hl7v2.model.v25.datatype.CX;
 import ca.uhn.hl7v2.model.v25.datatype.XAD;
 import ca.uhn.hl7v2.model.v25.datatype.XPN;
@@ -59,9 +67,11 @@ import ca.uhn.hl7v2.model.v25.segment.MSH;
 import ca.uhn.hl7v2.model.v25.segment.NK1;
 import ca.uhn.hl7v2.model.v25.segment.PID;
 import ca.uhn.hl7v2.model.v25.segment.SFT;
+import ca.uhn.hl7v2.parser.EncodingCharacters;
 import ca.uhn.hl7v2.parser.PipeParser;
 import ca.uhn.hl7v2.util.Terser;
 import net.sf.saxon.om.DocumentInfo;
+import net.sf.saxon.regex.RegexSyntaxException;
 
 
 /**
@@ -113,15 +123,15 @@ public final class MessageUtil {
 		Connection connection = null;
 		try
 		{
-			if(log.isDebugEnabled())
-				log.debug(String.format("Sending to %s:%s : %s", endpoint, port, parser.encode(request)));
+			if(log.isInfoEnabled())
+				log.info(String.format("Sending to %s:%s : %s", endpoint, port, parser.encode(request)));
 			
 			connection = hub.attach(endpoint, port, parser, MinLowerLayerProtocol.class);
 			Initiator initiator = connection.getInitiator();
 			Message response = initiator.sendAndReceive(request);
 			
-			if(log.isDebugEnabled())
-				log.debug(String.format("Response from %s:%s : %s", endpoint, port, parser.encode(response)));
+			if(log.isInfoEnabled())
+				log.info(String.format("Response from %s:%s : %s", endpoint, port, parser.encode(response)));
 			
 			return response;
 		}
@@ -165,12 +175,14 @@ public final class MessageUtil {
 	 * @param patient
 	 * @return
 	 * @throws HL7Exception 
+	 * @throws RegexSyntaxException 
 	 */
-	public Message createAdmit(Patient patient) throws HL7Exception
+	public Message createAdmit(Patient patient) throws HL7Exception, RegexSyntaxException
 	{
 		ADT_A01 message = new ADT_A01();
-		this.updateMSH(message.getMSH(), "ADT", "A01");
+		this.updateMSH(message.getMSH(), "ADT", "A04");
 		this.updateSFT(message.getSFT());
+		message.getEVN().getRecordedDateTime().getTime().setValue(new TS(Calendar.getInstance(), TS.MINUTE).toString());
 		message.getMSH().getVersionID().getVersionID().setValue("2.3.1");
 		
 		// Move patient data to PID
@@ -203,6 +215,13 @@ public final class MessageUtil {
 			
 			// Set the value
 			Terser.set(segment, Integer.parseInt(fieldIters[0]), 0, fieldIters.length > 1 ? Integer.parseInt(fieldIters[1]) : 1, 1, pat.getValue());;
+			Type[] fields = segment.getField(Integer.parseInt(fieldIters[0]));
+			if(fields[0] instanceof XPN) {
+				// rewrite for names
+				String rewriteRule = this.m_configuration.getNameRewriteRule();
+				if(rewriteRule != null && !rewriteRule.isEmpty())
+					this.rewriteName((XPN)fields[0], rewriteRule, pat.getValue());
+			}
 			
 			// Set the guard
 			if(extensionData.length > 1) {
@@ -220,46 +239,47 @@ public final class MessageUtil {
 	 * @throws DataTypeException 
 	 */
 	private void updateSFT(SFT sft) throws DataTypeException {
-		sft.getSoftwareProductName().setValue(String.format("OpenMRS %s", OpenmrsConstants.OPENMRS_VERSION));
-		sft.getSoftwareVendorOrganization().getOrganizationName().setValue("OpenMRS Community");
+	//	sft.getSoftwareProductName().setValue(String.format("OpenMRS %s", OpenmrsConstants.OPENMRS_VERSION));
+	//	sft.getSoftwareVendorOrganization().getOrganizationName().setValue("OpenMRS Community");
 	}
 	
 	/**
 	 * Update the PID segment
 	 * @throws HL7Exception 
+	 * @throws RegexSyntaxException 
 	 */
-	private void updatePID(PID pid, Patient patient, boolean localIdOnly) throws HL7Exception {
+	private void updatePID(PID pid, Patient patient, boolean localIdOnly) throws HL7Exception, RegexSyntaxException {
 
 		// Update the pid segment with data in the patient
 		
 		// PID-3
-		pid.getPatientIdentifierList(0).getAssigningAuthority().getUniversalID().setValue(this.m_configuration.getLocalPatientIdRoot());
-		pid.getPatientIdentifierList(0).getAssigningAuthority().getUniversalIDType().setValue("ISO");
+		if(this.m_configuration.getLocalPatientIdRoot().matches("^(\\d+?\\.){1,}\\d+$") ) {
+			pid.getPatientIdentifierList(0).getAssigningAuthority().getUniversalID().setValue(this.m_configuration.getLocalPatientIdRoot());
+			pid.getPatientIdentifierList(0).getAssigningAuthority().getUniversalIDType().setValue("ISO");
+		}
+		else 
+			pid.getPatientIdentifierList(0).getAssigningAuthority().getNamespaceID().setValue(this.m_configuration.getLocalPatientIdRoot());
+
 		pid.getPatientIdentifierList(0).getIDNumber().setValue(patient.getId().toString());
 		pid.getPatientIdentifierList(0).getIdentifierTypeCode().setValue("PI");
 		
 		// Other identifiers
-		if(!localIdOnly)
+		if(!localIdOnly) {
+
+			HashMap<String, String> exportIdentifiers = this.m_configuration.getLocalPatientIdentifierTypeMap();
+			
+			// Export IDs
 			for(PatientIdentifier patIdentifier : patient.getIdentifiers())
 			{
-				CX patientId = pid.getPatientIdentifierList(pid.getPatientIdentifierList().length);
-				if(II.isRootOid(new II(patIdentifier.getIdentifierType().getName())))
-				{
-					patientId.getAssigningAuthority().getUniversalID().setValue(patIdentifier.getIdentifierType().getName());
-					patientId.getAssigningAuthority().getUniversalIDType().setValue("ISO");
+				String domain = exportIdentifiers.get(patIdentifier.getIdentifierType().getName());
+				if(domain != null) {
+					CX cx = pid.getPatientIdentifierList(pid.getPatientIdentifierList().length);
+					this.updateCX(cx, patIdentifier, domain);
 				}
-				else if(II.isRootOid(new II(patIdentifier.getIdentifierType().getUuid())))
-				{
-					patientId.getAssigningAuthority().getUniversalID().setValue(patIdentifier.getIdentifierType().getUuid());
-					patientId.getAssigningAuthority().getUniversalIDType().setValue("ISO");
-				}
-				else
-					patientId.getAssigningAuthority().getNamespaceID().setValue(patIdentifier.getIdentifierType().getName());
-	
-				patientId.getIDNumber().setValue(patIdentifier.getIdentifier());
-				patientId.getIdentifierTypeCode().setValue("PT");
+				
 			}
-
+		}
+		
 		// Names
 		for(PersonName pn : patient.getNames())
 			if(!pn.getFamilyName().equals("(none)") && !pn.getGivenName().equals("(none)"))
@@ -306,10 +326,30 @@ public final class MessageUtil {
 	}
 
 	/**
+	 * Update the CX 
+	 * @param cx The HL7 Composite
+	 * @param id The local OpenMRS Patient Identifier
+	 * @param domain The domain to expose the identifier as
+	 * @throws DataTypeException 
+	 */
+	public void updateCX(CX cx, PatientIdentifier id, String domain) throws DataTypeException {
+		if(domain.matches("^(\\d+?\\.){1,}\\d+$")) {
+			cx.getAssigningAuthority().getUniversalID().setValue(domain);
+			cx.getAssigningAuthority().getUniversalIDType().setValue("ISO");
+		}
+		else 
+			cx.getAssigningAuthority().getNamespaceID().setValue(domain);
+		cx.getIDNumber().setValue(id.getIdentifier());
+		cx.getIdentifierTypeCode().setValue("PT");
+
+	}
+	
+	/**
 	 * Update the NK1 segment
 	 * @throws HL7Exception 
+	 * @throws RegexSyntaxException 
 	 */
-	private void updateNK1(NK1 nk1, Relationship relationship, boolean localIdOnly) throws HL7Exception {
+	private void updateNK1(NK1 nk1, Relationship relationship, boolean localIdOnly) throws HL7Exception, RegexSyntaxException {
 
 		// Update the pid segment with data in the patient
 		Person person = relationship.getPersonA();
@@ -337,33 +377,25 @@ public final class MessageUtil {
 		if(!localIdOnly && relationship.getPersonB().isPatient()) 
 		{
 			
+			HashMap<String, String> exportIdentifiers = this.m_configuration.getLocalPatientIdentifierTypeMap();
+			
 			// Get the person as a patient
 			Patient patient = Context.getPatientService().getPatient(relationship.getPersonB().getId());
 			for(PatientIdentifier patIdentifier : patient.getIdentifiers())
 			{
-				CX patientId = nk1.getNextOfKinAssociatedPartySIdentifiers(nk1.getNextOfKinAssociatedPartySIdentifiersReps());
-				if(II.isRootOid(new II(patIdentifier.getIdentifierType().getName())))
-				{
-					patientId.getAssigningAuthority().getUniversalID().setValue(patIdentifier.getIdentifierType().getName());
-					patientId.getAssigningAuthority().getUniversalIDType().setValue("ISO");
+				String domain = exportIdentifiers.get(patIdentifier.getIdentifierType().getName());
+				if(domain != null) {
+					CX cx = nk1.getNextOfKinAssociatedPartySIdentifiers(nk1.getNextOfKinAssociatedPartySIdentifiers().length);
+					this.updateCX(cx, patIdentifier, domain);
 				}
-				else if(II.isRootOid(new II(patIdentifier.getIdentifierType().getUuid())))
-				{
-					patientId.getAssigningAuthority().getUniversalID().setValue(patIdentifier.getIdentifierType().getUuid());
-					patientId.getAssigningAuthority().getUniversalIDType().setValue("ISO");
-				}
-				else
-					patientId.getAssigningAuthority().getNamespaceID().setValue(patIdentifier.getIdentifierType().getName());
-	
-				patientId.getIDNumber().setValue(patIdentifier.getIdentifier());
-				patientId.getIdentifierTypeCode().setValue("PT");
+
 			}
 		}
 		
 		// Names
 		for(PersonName pn : person.getNames())
 			if(!pn.getFamilyName().equals("(none)") && !pn.getGivenName().equals("(none)"))
-				this.updateXPN(nk1.getNKName(nk1.getNKNameReps()), pn);
+				this.updateXPN(nk1.getNKName(nk1.getNKName().length), pn);
 		
 		// Gender
 		nk1.getAdministrativeSex().setValue(person.getGender());
@@ -379,7 +411,7 @@ public final class MessageUtil {
 		// Addresses
 		for(PersonAddress pa : person.getAddresses())
 		{
-			XAD xad = nk1.getContactPersonSAddress(nk1.getContactPersonSAddressReps());
+			XAD xad = nk1.getContactPersonSAddress(nk1.getContactPersonSAddress().length);
 			this.updateXAD(xad, pa);
 		}
 		
@@ -390,27 +422,76 @@ public final class MessageUtil {
 	 * Updates the PN with the XPN
 	 * @param xpn
 	 * @param pn
-	 * @throws DataTypeException
+	 * @throws RegexSyntaxException 
+	 * @throws HL7Exception 
 	 */
-	private void updateXPN(XPN xpn, PersonName pn) throws DataTypeException {
-		if(pn.getFamilyName() != null && !pn.getFamilyName().equals("(none)"))
-			xpn.getFamilyName().getSurname().setValue(pn.getFamilyName());
-		if(pn.getFamilyName2() != null)
-			xpn.getFamilyName().getSurnameFromPartnerSpouse().setValue(pn.getFamilyName2());
-		if(pn.getGivenName() != null && !pn.getGivenName().equals("(none)"))
-			xpn.getGivenName().setValue(pn.getGivenName());
-		if(pn.getMiddleName() != null)
-			xpn.getSecondAndFurtherGivenNamesOrInitialsThereof().setValue(pn.getMiddleName());
-		if(pn.getPrefix() != null)
-			xpn.getPrefixEgDR().setValue(pn.getPrefix());
+	private void updateXPN(XPN xpn, PersonName pn) throws RegexSyntaxException, HL7Exception {
+		
+		String nameRewrite = this.m_configuration.getNameRewriteRule();
+		
+		if(nameRewrite == null || nameRewrite.isEmpty()) {
+			if(pn.getFamilyName() != null && !pn.getFamilyName().equals("(none)"))
+				xpn.getFamilyName().getSurname().setValue(pn.getFamilyName());
+			if(pn.getFamilyName2() != null)
+				xpn.getFamilyName().getSurnameFromPartnerSpouse().setValue(pn.getFamilyName2());
+			if(pn.getGivenName() != null && !pn.getGivenName().equals("(none)"))
+				xpn.getGivenName().setValue(pn.getGivenName());
+			if(pn.getMiddleName() != null)
+				xpn.getSecondAndFurtherGivenNamesOrInitialsThereof().setValue(pn.getMiddleName());
+			if(pn.getPrefix() != null)
+				xpn.getPrefixEgDR().setValue(pn.getPrefix());
+		}
+		else {
+			String nameString = String.format("%s %s %s %s %s", pn.getPrefix(), pn.getGivenName(), pn.getFamilyName(), pn.getFamilyName2(), pn.getFamilyNameSuffix()).replace("null ", "").replace(" null", "");
+			this.rewriteName(xpn, nameRewrite, nameString);
+		}
 		
 		if(pn.getPreferred())
 			xpn.getNameTypeCode().setValue("L");
 		else
 			xpn.getNameTypeCode().setValue("U");
 
+		this.log.info(String.format("XPN: %s", xpn.toString()));
+
 	}
 
+	/**
+	 * Rewrites the specified name using the rewrite rule
+	 * @param xpn The XPN to rewrite
+	 * @param nameRewrite The way to rewrite the name
+	 * @param nameString The name string itself
+	 * @throws RegexSyntaxException 
+	 * @throws HL7Exception 
+	 */
+	public void rewriteName(XPN xpn, String nameRewrite, String nameString) throws RegexSyntaxException, HL7Exception {
+		
+		String[] rules = nameRewrite.split("/");
+		if(rules.length != 4 || !rules[0].isEmpty())
+			throw new RegexSyntaxException(String.format("%s is not valid regex", nameRewrite));
+		
+		if(rules[3].contains("i"))
+			rules[1] = String.format("(?i)%s", rules[1]);
+		String hl7Data = nameString.replaceAll(rules[1], rules[2]);
+
+		this.log.info(String.format("MPI Will Rewrite name from %s to %s", nameString, hl7Data));
+
+		// This version of HAPI doesn't have the nice parse function
+		// HACK: Manually parse the input
+		String[] comps = hl7Data.split("\\^");
+		for(int c = 0; c < comps.length; c++)
+		{
+			String[] subComps = comps[c].split("&");
+			Object hl7Comp = xpn.getComponent(c);
+			if(hl7Comp instanceof AbstractPrimitive)
+				((AbstractPrimitive)xpn.getComponent(c)).setValue(comps[c]);
+			else
+				for(int s = 0; s < subComps.length; s++) {
+					((AbstractPrimitive)((Composite)xpn.getComponent(c)).getComponent(s)).setValue(subComps[s]);
+				}
+		}
+		
+	}
+	
 	/**
 	 * Updates the specified HL7v2 address
 	 * @param xad
@@ -426,6 +507,9 @@ public final class MessageUtil {
 			xad.getCity().setValue(pa.getCityVillage());
 		if(pa.getCountry() != null)
 			xad.getCountry().setValue(pa.getCountry());
+		else if(this.m_configuration.getDefaultCountry() != null &&
+				!this.m_configuration.getDefaultCountry().isEmpty())
+			xad.getCountry().setValue(this.m_configuration.getDefaultCountry());
 		if(pa.getCountyDistrict() != null)
 			xad.getCountyParishCode().setValue(pa.getCountyDistrict());
 		if(pa.getPostalCode() != null)
@@ -456,7 +540,7 @@ public final class MessageUtil {
         msh.getReceivingFacility().getNamespaceID().setValue(this.m_configuration.getRemoteFacility()); // Mohawk College of Applied Arts and Technology
         
         if(this.m_configuration.getMsh8Security() != null &&
-        		"".equals(this.m_configuration.getMsh8Security()))
+        		!this.m_configuration.getMsh8Security().isEmpty())
         	msh.getSecurity().setValue(this.m_configuration.getMsh8Security());
         
         msh.getSendingApplication().getNamespaceID().setValue(this.m_configuration.getLocalApplication());
@@ -514,7 +598,8 @@ public final class MessageUtil {
 					}
 					else {
 						PatientIdentifier patId = this.interpretCx(id);
-						patient.addIdentifier(patId);
+						if(patId != null)
+							patient.addIdentifier(patId);
 					}
 				}
 				
@@ -543,7 +628,6 @@ public final class MessageUtil {
 					TS tsTemp = TS.valueOf(pid.getPatientDeathDateAndTime().getTime().getValue());
 					
 					patient.setDeathDate(tsTemp.getDateValue().getTime());
-					patient.setDeathdateEstimated(tsTemp.getDateValuePrecision() < TS.DAY);
 				}
 				patient.setDead("Y".equals(pid.getPatientDeathIndicator().getValue()));
 								
@@ -558,7 +642,8 @@ public final class MessageUtil {
 					patient.addAddress(pa);
 				}
 			}
-			if(this.m_configuration.getUseOpenMRSRelationships()) // Parse NK1 if we're using OpenMRS relationships
+			if(Arrays.asList(queryResponseGroup.getNames()).contains("NK1") &&
+					this.m_configuration.getUseOpenMRSRelationships()) // Parse NK1 if we're using OpenMRS relationships
 				for(Structure nk1Struct : queryResponseGroup.getAll("NK1"))
 				{
 					NK1 nk1 = (NK1)nk1Struct;
@@ -595,7 +680,8 @@ public final class MessageUtil {
 						else {
 							relatedPerson = new Patient(relatedPerson.getId());
 							PatientIdentifier patId = this.interpretCx(id);
-							((Patient)relatedPerson).addIdentifier(patId);
+							if(patId != null)
+								((Patient)relatedPerson).addIdentifier(patId);
 						}
 					}
 					
@@ -648,7 +734,11 @@ public final class MessageUtil {
 					String terse = String.format("/QUERY_RESPONSE(%s)", i);
 					String filter = extensions.get(extName);
 					String[] filterData = filter.split("\\?"); // ? is used as a filter for example: Father's Name:NK1-2?NK1-3=MTH
-					terse += String.format("/%s", filterData[0].substring(0, filterData[0].indexOf("-")));
+					String segmentName = filterData[0].substring(0, filterData[0].indexOf("-"));
+					if(!Arrays.asList(queryResponseGroup.getNames()).contains(segmentName))
+						continue;
+					terse += String.format("/%s", segmentName);
+					
 					
 					// Filter has guard
 					if(filterData.length > 1) {
@@ -657,7 +747,7 @@ public final class MessageUtil {
 						Structure[] childSegment = queryResponseGroup.getAll(guard[0].split("-")[0]);
 						for(int si = 0; si < childSegment.length; si++) {
 							int fieldNo = Integer.parseInt(guard[0].split("-")[1]);
-							if(Terser.get((Segment)childSegment[si], fieldNo, 0, 1, 1).equals(guard[1])) {
+							if(guard[1].equals(Terser.get((Segment)childSegment[si], fieldNo, 0, 1, 1))) {
 								terse += String.format("(%s)", si);
 							}
 						}
@@ -735,33 +825,48 @@ public final class MessageUtil {
 		
 
 		PatientIdentifierType pit = null;
+		HashMap<String, String> authorityMaps = this.m_configuration.getLocalPatientIdentifierTypeMap();
 
-		if(id.getAssigningAuthority().getUniversalID().getValue() != null &&
-				!id.getAssigningAuthority().getUniversalID().getValue().isEmpty())
-		{
-			pit = Context.getPatientService().getPatientIdentifierTypeByName(id.getAssigningAuthority().getUniversalID().getValue());
-			if(pit == null)
-				pit = Context.getPatientService().getPatientIdentifierTypeByUuid(id.getAssigningAuthority().getUniversalID().getValue());
-			else if(!pit.getUuid().equals(id.getAssigningAuthority().getUniversalID().getValue())
-					&& this.m_configuration.getAutoUpdateLocalPatientIdentifierTypes()) // fix the UUID
-			{
-				log.debug(String.format("Updating %s to have UUID %s", pit.getName(), id.getAssigningAuthority().getUniversalID().getValue()));
-				pit.setUuid(id.getAssigningAuthority().getUniversalID().getValue());
-				Context.getPatientService().savePatientIdentifierType(pit);
+		// Get the domain we're lookng for
+		String[] domains = new String[] {
+				id.getAssigningAuthority().getNamespaceID().getValue(),
+				id.getAssigningAuthority().getUniversalID().getValue()
+		};
+
+		// Is there a map for this object?
+		for(String domain : domains) {
+			
+			if(domain == null) continue; 
+			
+			for(String key : authorityMaps.keySet()) {
+				if(domain.equals(authorityMaps.get(key))) {
+					pit = Context.getPatientService().getPatientIdentifierTypeByName(key);
+					if(pit == null)
+						this.log.warn(String.format("%s is mapped to %s but cannot find %s", domain, key));
+				}
+			}
+			
+			
+			// No map, so we should try to fa
+			if(pit == null) {
+				pit = Context.getPatientService().getPatientIdentifierTypeByName(domain);
+				if(pit == null)
+					pit = Context.getPatientService().getPatientIdentifierTypeByUuid(domain);
+				if(pit != null 
+						&& !pit.getUuid().equals(id.getAssigningAuthority().getUniversalID().getValue())
+						&& this.m_configuration.getAutoUpdateLocalPatientIdentifierTypes()) // fix the UUID
+				{
+					log.debug(String.format("Updating %s to have UUID %s", pit.getName(), id.getAssigningAuthority().getUniversalID().getValue()));
+					pit.setUuid(id.getAssigningAuthority().getUniversalID().getValue());
+					Context.getPatientService().savePatientIdentifierType(pit);
+				}
 			}
 		}
-		if(pit == null && id.getAssigningAuthority().getNamespaceID().getValue() != null &&
-				!id.getAssigningAuthority().getNamespaceID().getValue().isEmpty())
-		{
-			pit = Context.getPatientService().getPatientIdentifierTypeByName(id.getAssigningAuthority().getNamespaceID().getValue());
-			if(pit != null && !pit.getUuid().equals(id.getAssigningAuthority().getUniversalID().getValue())
-					&& this.m_configuration.getAutoUpdateLocalPatientIdentifierTypes()) // fix the UUID
-			{
-				log.debug(String.format("Updating %s to have UUID %s", pit.getName(), id.getAssigningAuthority().getUniversalID().getValue()));
-				pit.setUuid(id.getAssigningAuthority().getUniversalID().getValue());
-				Context.getPatientService().savePatientIdentifierType(pit);
-			}
-
+		
+		if(pit == null &&
+				!this.m_configuration.getEnterprisePatientIdRoot().equals(id.getAssigningAuthority().getNamespaceID().getValue())) {
+			this.log.warn(String.format("ID domain %s has no known mapping to a Patient ID type", id.getAssigningAuthority().getNamespaceID().getValue()));
+			return null;
 		}
 		
 		PatientIdentifier patId = new PatientIdentifier(
@@ -771,8 +876,7 @@ public final class MessageUtil {
 				);
 		
 		// Do not include the local identifier
-		if(id.getAssigningAuthority().getUniversalID().equals(this.m_configuration.getPreferredPatientIdRoot()) ||
-				id.getAssigningAuthority().getNamespaceID().equals(this.m_configuration.getPreferredPatientIdRoot()))
+		if(id.getAssigningAuthority().getNamespaceID().equals(this.m_configuration.getNationalPatientIdRoot()))
 			patId.setPreferred(true);
 		
 		return patId;
@@ -814,8 +918,9 @@ public final class MessageUtil {
 	/**
 	 * Create the update message
 	 * @throws HL7Exception 
+	 * @throws RegexSyntaxException 
 	 */
-	public Message createUpdate(Patient patient) throws HL7Exception {
+	public Message createUpdate(Patient patient) throws HL7Exception, RegexSyntaxException {
 		ADT_A01 message = new ADT_A01();
 		this.updateMSH(message.getMSH(), "ADT", "A08");
 		message.getMSH().getVersionID().getVersionID().setValue("2.3.1");

@@ -54,7 +54,7 @@
 						<ref bean="transactionAttributeSource" />
 					</property>
 				</bean>
-			</list>
+				</list>
 		</property>
 	</bean>
 	

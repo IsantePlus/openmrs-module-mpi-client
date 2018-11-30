@@ -8,14 +8,14 @@ import org.openmrs.module.web.extension.LinkExt;
  * @author Justin
  *
  */
-public class HealthInformationExchangeLink extends LinkExt {
+public class MpiClientLink extends LinkExt {
 
 	/**
 	 * Get the label of the extension
 	 */
 	@Override
 	public String getLabel() {
-		return Context.getMessageSourceService().getMessage("openhie-client.hiePortlet.linkText");
+		return Context.getMessageSourceService().getMessage("santedb-mpiclient.hiePortlet.linkText");
 	}
 
 	/**
@@ -23,7 +23,7 @@ public class HealthInformationExchangeLink extends LinkExt {
 	 */
 	@Override
 	public String getRequiredPrivilege() {
-		return "Create Patient";
+		return "Add Patients";
 	}
 
 	/**
@@ -31,7 +31,7 @@ public class HealthInformationExchangeLink extends LinkExt {
 	 */
 	@Override
 	public String getUrl() {
-		return "module/openhie-client/hieFindPatient.form";
+		return "module/santedb-mpiclient/mpiFindPatient.form";
 	}
 
 }
