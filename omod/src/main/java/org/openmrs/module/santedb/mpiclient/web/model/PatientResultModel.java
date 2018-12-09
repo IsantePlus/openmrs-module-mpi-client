@@ -31,6 +31,9 @@ public class PatientResultModel {
 	private String dateOfBirth;
 	// Identifier
 	private String identifier;
+	// Get NHID
+	private String nhid;
+	
 	// True
 	private boolean isImported;
 	// Open Mrs id
@@ -72,7 +75,13 @@ public class PatientResultModel {
     public String getIdentifier() {
     	return identifier;
     }
-	
+    /**
+     * @return the identifier
+     */
+    public String getNhid() {
+    	return nhid;
+    }
+    
     /**
      * @return the isImported
      */
@@ -115,10 +124,10 @@ public class PatientResultModel {
 			else if(this.identifier == null)
 				this.identifier = String.format("%s (%s)", pid.getIdentifier(), pid.getIdentifierType().getDescription());
 			else if(pid.getPreferred())
-			{
 				this.identifier = String.format("%s", pid.getIdentifier());
-			}
-			
+
+			if(pid.getIdentifierType() != null && this.m_configuration.getNationalPatientIdRoot().equals(this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName())))
+				this.nhid = pid.getIdentifier();
 			//this.isImported |= pid.getIdentifierType().getName().equals(this.m_configuration.getPatientRoot());
 		}
 		

@@ -200,12 +200,13 @@ public final class MessageUtil {
 		this.updateSFT(message.getSFT());
 		message.getEVN().getRecordedDateTime().getTime().setValue(new TS(Calendar.getInstance(), TS.MINUTE).toString());
 		message.getMSH().getVersionID().getVersionID().setValue("2.3.1");
-		
+		message.getPV1().getPatientClass().setValue("I");
 		// Move patient data to PID
 		this.updatePID(message.getPID(), patient, false);
 
-		for(Relationship rel : Context.getPersonService().getRelationshipsByPerson(patient))
+		for(Relationship rel : Context.getPersonService().getRelationshipsByPerson(patient)) {
 			this.updateNK1(message.getNK1(message.getNK1Reps()), rel, false);
+		}
 		
 		// Extensions
 		Terser terser = new Terser(message);
@@ -246,6 +247,9 @@ public final class MessageUtil {
 			}
 			
 		}
+		
+		for(int i = 0; i < message.getNK1Reps(); i++)
+			message.getNK1(i).getSetIDNK1().setValue(String.format("%s", i+1));
 		return message;
 	}
 	
@@ -859,7 +863,7 @@ public final class MessageUtil {
 				if(domain.equals(authorityMaps.get(key))) {
 					pit = Context.getPatientService().getPatientIdentifierTypeByName(key);
 					if(pit == null)
-						this.log.warn(String.format("%s is mapped to %s but cannot find %s", domain, key));
+						this.log.warn(String.format("%s is mapped to %s but cannot find %s", domain, key, key));
 				}
 			}
 			

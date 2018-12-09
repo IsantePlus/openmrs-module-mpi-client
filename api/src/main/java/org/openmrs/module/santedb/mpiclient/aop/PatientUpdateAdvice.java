@@ -77,8 +77,10 @@ public class PatientUpdateAdvice implements AfterReturningAdvice {
 					if(pit != null && patient.getPatientIdentifier(pit) == null &&
 							patient.getPatientIdentifier(pit) == null) {
 						PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, this.m_configuration.getNationalPatientIdRoot());
-						pid.setPatient(patient);
-						Context.getPatientService().savePatientIdentifier(pid);
+						if(pid != null) {
+							pid.setPatient(patient);
+							Context.getPatientService().savePatientIdentifier(pid);
+						}
 					}
 				}
 				

@@ -46,6 +46,7 @@ import org.openmrs.PersonAddress;
 import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 import org.openmrs.Visit;
+import org.openmrs.PatientIdentifierType.LocationBehavior;
 import org.openmrs.api.DuplicateIdentifierException;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
@@ -320,7 +321,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		// Existing? Then update this from that
 		if(patientRecord != null)
 		{
-			
+			this.log.info(String.format("Matched with %s updating", patientRecord.getId()));
 			// Add new identifiers
 			for(PatientIdentifier id : patient.getIdentifiers())
 			{
@@ -328,8 +329,11 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 				if(id.getIdentifierType() == null) continue ;
 				for(PatientIdentifier eid : patientRecord.getIdentifiers())
 					hasId |= eid.getIdentifier().equals(id.getIdentifier()) && eid.getIdentifierType().getId().equals(id.getIdentifierType().getId());
-				if(!hasId)
+				if(!hasId) {
+					if(id.getIdentifierType().getLocationBehavior().equals(LocationBehavior.REQUIRED))
+						id.setLocation(Context.getLocationService().getDefaultLocation());
 					patientRecord.getIdentifiers().add(id);
+				}
 			}
 			
 			// update names
@@ -353,18 +357,20 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		{
 			boolean isPreferred = false;
 			
+			patientRecord = patient.toPatient();
+			
 			PatientIdentifier ecidPid = null;
 			
-			for(PatientIdentifier id : patient.getIdentifiers()) {
+			for(PatientIdentifier id : patientRecord.getIdentifiers()) {
 				if(id.getIdentifierType() == null)
 					ecidPid = id;
 				isPreferred |= id.getPreferred();
 			}
-			patient.removeIdentifier(ecidPid);
+			patientRecord.removeIdentifier(ecidPid);
 			
 			if(!isPreferred)
-				patient.getIdentifiers().iterator().next().setPreferred(true);
-			patientRecord = patient;
+				patientRecord.getIdentifiers().iterator().next().setPreferred(true);
+			
 		}
 		
 		Patient importedPatient = Context.getPatientService().savePatient(patientRecord);
@@ -381,7 +387,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		}
 		
 		// Now notify the MPI
-		this.exportPatient(patient);
+		this.exportPatient(importedPatient);
 		return importedPatient;
 	}
 	
@@ -402,6 +408,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			Message response = this.m_messageUtil.sendMessage(admitMessage, this.m_configuration.getPixEndpoint(), this.m_configuration.getPixPort());
 			
 			Terser terser = new Terser(response);
+			log.info(String.format("Message indicates: %s", terser.get("/MSA-1")));
 			if(!terser.get("/MSA-1").endsWith("A"))
 				throw new MpiClientException(String.format("Error from MPI :> %s", terser.get("/MSA-1")), response);
 			auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, true);

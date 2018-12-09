@@ -20,6 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.openmrs.Patient;
+import org.openmrs.PatientIdentifier;
+import org.openmrs.PersonAddress;
+import org.openmrs.PersonAttribute;
+import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 
 /**
@@ -47,4 +51,31 @@ public class MpiPatient extends Patient {
 		this.m_relationships.add(relationship);
 	}
 	
+	/**
+	 * Convert this MpiPatient to an actual patient
+	 */
+	public Patient toPatient() {
+
+		Patient retVal = new Patient();
+		for(PersonAddress pa : this.getAddresses())
+			pa.setPerson(retVal);
+		retVal.setAddresses(this.getAddresses());
+		for(PersonName pn : this.getNames())
+			pn.setPerson(retVal);
+		retVal.setNames(this.getNames());
+		for(PatientIdentifier pi : this.getIdentifiers())
+			pi.setPatient(retVal);
+		retVal.setIdentifiers(this.getIdentifiers());
+		for(PersonAttribute pa : this.getAttributes())
+			pa.setPerson(retVal);
+		retVal.setAttributes(this.getAttributes());
+		
+		retVal.setDeathDate(this.getDeathDate());
+		retVal.setGender(this.getGender());
+		retVal.setBirthdateEstimated(this.getBirthdateEstimated());
+		retVal.setBirthdate(this.getBirthdate());
+		retVal.setAttributes(this.getAttributes());
+		retVal.setDead(this.getDead());
+		return retVal;
+	}
 }

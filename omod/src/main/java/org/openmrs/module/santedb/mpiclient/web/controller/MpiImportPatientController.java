@@ -6,6 +6,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
+import org.openmrs.PatientIdentifier;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
@@ -40,7 +41,18 @@ public class MpiImportPatientController {
 		{
 			MpiClientService service = Context.getService(MpiClientService.class);
 			MpiClientConfiguration config = MpiClientConfiguration.getInstance();
-			model.put("patient", service.getPatient(ecid, config.getEnterprisePatientIdRoot()));
+			// Get rid of the ecid from the model
+			Patient patient = service.getPatient(ecid, config.getEnterprisePatientIdRoot());
+			
+			
+			PatientIdentifier nullPid = null;
+			for(PatientIdentifier pid : patient.getIdentifiers())
+				if(pid.getIdentifierType() == null)
+					nullPid = pid;
+			if(nullPid != null)
+				patient.removeIdentifier(nullPid);
+			
+			model.put("patient", patient);
 			return new ModelAndView("/module/santedb-mpiclient/mpiImportPatient", model);
 		}
 		catch(MpiClientException e) {

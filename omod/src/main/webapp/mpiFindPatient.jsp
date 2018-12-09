@@ -46,8 +46,8 @@
 		<table style="width:100%">
 			<tr>
 				<th>ID</th>
-				<th>Family Name</th>
-				<th>Given Name</th>
+				<th>National Health ID</th>
+				<th>Name</th>
 				<th>Date Of Birth</th>
 				<th>Gender</th>
 				<th>Action</th>
@@ -55,7 +55,7 @@
 			<c:forEach var="patient" items="${results}">
 				<tr>
 					<td style="border-bottom:solid 1px #ddd">${patient.identifier }</td>
-					<td style="border-bottom:solid 1px #ddd">${patient.familyName }</td>
+					<td style="border-bottom:solid 1px #ddd">${patient.nhid }</td>
 					<td style="border-bottom:solid 1px #ddd">${patient.givenName }</td>
 					<td style="border-bottom:solid 1px #ddd">${patient.dateOfBirth }</td>
 					<td style="border-bottom:solid 1px #ddd">${patient.gender }</td>
