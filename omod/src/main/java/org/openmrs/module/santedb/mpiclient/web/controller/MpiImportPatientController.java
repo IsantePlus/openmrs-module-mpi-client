@@ -1,12 +1,14 @@
 package org.openmrs.module.santedb.mpiclient.web.controller;
 
 import java.text.ParseException;
+import java.util.Date;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
+import org.openmrs.Visit;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
@@ -81,7 +83,15 @@ public class MpiImportPatientController {
 			MpiClientConfiguration config = MpiClientConfiguration.getInstance();
 			MpiPatient pat = service.getPatient(ecid, config.getEnterprisePatientIdRoot());
 			Patient createdPat = service.importPatient(pat);
-			return new ModelAndView("redirect:/patientDashboard.form?patientId=" + createdPat.getId().toString() );
+			
+			// HACK: Create a visit and encounter
+			Visit visit = new Visit();
+			visit.setPatient(createdPat);
+			visit.setVisitType(Context.getVisitService().getVisitType(1));
+			visit.setStartDatetime(new Date());
+			visit.setLocation(Context.getLocationService().getDefaultLocation());
+			Context.getVisitService().saveVisit(visit);
+			return new ModelAndView("redirect:/kenyaemr/registration/registrationViewPatient.page?patientId=" + createdPat.getId().toString() );
 		}
 		catch(MpiClientException e) {
 			// TODO Auto-generated catch block

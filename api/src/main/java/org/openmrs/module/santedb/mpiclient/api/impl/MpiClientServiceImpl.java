@@ -47,6 +47,7 @@ import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 import org.openmrs.Visit;
 import org.openmrs.PatientIdentifierType.LocationBehavior;
+import org.openmrs.api.APIException;
 import org.openmrs.api.DuplicateIdentifierException;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
@@ -373,8 +374,13 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			
 		}
 		
-		Patient importedPatient = Context.getPatientService().savePatient(patientRecord);
-		
+		Patient importedPatient = null;
+		try {
+			importedPatient = Context.getPatientService().savePatient(patientRecord);
+		}
+		catch(APIException e) {
+			throw new MpiClientException("Unable to insert patient",e); 
+		}
 		// Now setup the relationships
 		if(patient instanceof MpiPatient &&
 				this.m_configuration.getUseOpenMRSRelationships()) {
