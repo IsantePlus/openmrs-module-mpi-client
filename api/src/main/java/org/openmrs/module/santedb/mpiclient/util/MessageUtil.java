@@ -143,7 +143,9 @@ public final class MessageUtil {
 				log.info(String.format("Sending to %s:%s : %s", endpoint, port, parser.encode(request)));
 			
 			connection = hub.attach(endpoint, port, parser, MinLowerLayerProtocol.class);
+			
 			Initiator initiator = connection.getInitiator();
+			initiator.setTimeoutMillis(20000);
 			Message response = initiator.sendAndReceive(request);
 			
 			if(log.isInfoEnabled())
