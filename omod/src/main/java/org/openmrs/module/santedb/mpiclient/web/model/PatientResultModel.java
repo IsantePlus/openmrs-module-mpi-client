@@ -117,6 +117,7 @@ public class PatientResultModel {
 		}
 		this.gender = result.getGender();
 		this.dateOfBirth = new SimpleDateFormat("yyyy-MMM-dd").format(result.getBirthdate());
+
 		for(PatientIdentifier pid : result.getIdentifiers())
 		{
 			if(pid.getIdentifierType() == null)

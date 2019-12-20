@@ -13,6 +13,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
+import org.openmrs.PatientIdentifierType;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
@@ -81,10 +82,11 @@ public class MpiFindPatientController {
 				
 			}
 			
-			List<MpiPatient> results = service.searchPatient(search.getFamilyName(), search.getGivenName(), dobDate, isFuzzy, search.getGender(), identifier, momsIdentifier);
+			List<MpiPatient> results = service.searchPatient(search.getFamilyName(), search.getGivenName(), dobDate, isFuzzy, search.getGender(), null, search.getAddress(),  identifier, momsIdentifier);
 			List<PatientResultModel> modelResult = new ArrayList<PatientResultModel>();
-			for(MpiPatient result : results)
+			for(MpiPatient result : results) {
 				modelResult.add(new PatientResultModel(result));
+			}
 			
 			model.put("successful", true);
 			model.put("hasResults", modelResult.size() > 0);

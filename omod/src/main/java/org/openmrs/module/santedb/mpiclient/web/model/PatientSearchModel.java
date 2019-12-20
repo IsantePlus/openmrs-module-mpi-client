@@ -33,6 +33,9 @@ public class PatientSearchModel {
 	public void setMomsId(String momsId) {
 		this.momsId = momsId;
 	}
+	
+	// Family name
+		private String address;
 	// Family name
 	private String familyName;
 	// Given name
@@ -90,4 +93,16 @@ public class PatientSearchModel {
 		this.dateOfBirth = dateOfBirth;
 	}
 	
+	/*
+	 * @return the familyName
+	 */
+	public String getAddress() {
+		return address;
+	}
+	/**
+	 * @param familyName the familyName to set
+	 */
+	public void setAddress(String address) {
+		this.address = address;
+	}
 }

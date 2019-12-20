@@ -34,7 +34,10 @@ import org.dcm4che3.audit.AuditMessages.EventID;
 import org.dcm4che3.audit.AuditMessages.EventTypeCode;
 import org.dcm4che3.audit.AuditMessages.ParticipantObjectIDTypeCode;
 import org.dcm4che3.audit.AuditMessages.RoleIDCode;
+import org.dcm4che3.net.Connection;
+import org.dcm4che3.net.Device;
 import org.dcm4che3.net.audit.AuditLogger;
+import org.dcm4che3.net.audit.AuditRecordRepository;
 import org.marc.everest.datatypes.II;
 import org.marc.everest.datatypes.NullFlavor;
 import org.marc.everest.datatypes.SC;
@@ -95,6 +98,50 @@ public class AuditUtil {
 		return s_instance;
 	}
 	
+	/**
+	 * Create logger device
+	 */
+	public Device createLoggerDevice() { 
+		Device device = new Device(String.format("%s^^^%s", this.m_configuration.getLocalApplication(), this.m_configuration.getLocalFacility()));
+
+		
+		Connection transportConnection = new Connection(this.m_configuration.getAuditRepositoryTransport(), this.m_configuration.getAuditRepositoryEndpoint());
+		
+		// UDP
+		if("audit-udp".equals(transportConnection.getCommonName()))
+		{
+			transportConnection.setClientBindAddress("0.0.0.0");
+			transportConnection.setProtocol(Connection.Protocol.SYSLOG_UDP);
+		}
+		else if("audit-tcp".equals(transportConnection.getCommonName()))
+		{
+			transportConnection.setProtocol(Connection.Protocol.DICOM);
+		}
+		else if("audit-tls".equals(transportConnection.getCommonName()))
+		{
+			transportConnection.setProtocol(Connection.Protocol.SYSLOG_TLS);
+			transportConnection.setTlsCipherSuites("TLS_RSA_WITH_AES_128_CBC_SHA");
+		}
+		else
+			throw new IllegalArgumentException("Connection must be audit-tls or audit-udp");
+
+		transportConnection.setPort(this.m_configuration.getAuditRepositoryPort());
+		
+		device.addConnection(transportConnection);
+		
+		AuditRecordRepository repository = new AuditRecordRepository();
+		device.addDeviceExtension(repository);
+		repository.addConnection(transportConnection);
+
+		AuditLogger logger = new AuditLogger();
+		device.addDeviceExtension(logger);
+		logger.addConnection(transportConnection);
+		logger.setAuditRecordRepositoryDevice(device);
+		logger.setSchemaURI(AuditMessages.SCHEMA_URI);
+		
+		return device;
+		
+	}
 	
 	/**
 	 * Create audit message

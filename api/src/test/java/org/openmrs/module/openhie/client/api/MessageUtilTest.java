@@ -315,6 +315,89 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	/**
+	 * Tests that the preferred correlation works
+	 * @throws HL7Exception 
+	 * @throws RegexSyntaxException 
+	 */
+	@Test
+	public void testDoesNotIncludeLocalIdentifier() throws HL7Exception, RegexSyntaxException {
+		
+
+		Patient testPatient = new Patient();
+		testPatient.setGender("M");
+		testPatient.setBirthdate(new Date());
+		testPatient.addName(new PersonName("No Local",null, "(NULL)"));
+		testPatient.getNames().iterator().next().setPreferred(true);
+		PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierTypeByName("Test 1");
+		testPatient.addIdentifier(new PatientIdentifier("564", pit, Context.getLocationService().getDefaultLocation()));
+		pit = Context.getPatientService().getPatientIdentifierTypeByName("Test 2");
+		testPatient.addIdentifier(new PatientIdentifier("AD9", pit, Context.getLocationService().getDefaultLocation()));
+		testPatient.getPatientIdentifier().setPreferred(true);
+
+		testPatient.getPatientIdentifier().setPreferred(true);
+		testPatient = Context.getPatientService().savePatient(testPatient);
+
+		String oldLocal = MpiClientConfiguration.getInstance().getLocalPatientIdRoot();
+
+		// message should have local domain
+		Message admit = MessageUtil.getInstance().createAdmit(testPatient);
+		String message = new PipeParser().encode(admit);
+		Assert.assertTrue("Expected message to have LOCAL domain", message.contains("^" + oldLocal));
+
+		Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_LOCAL_ID, "-"));
+		Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, "TEST"));
+		MpiClientConfiguration.getInstance().clearCache();
+		
+		admit = MessageUtil.getInstance().createAdmit(testPatient);
+		message = new PipeParser().encode(admit);
+		Assert.assertFalse("Expected message to not have LOCAL domain", message.contains("^" + oldLocal));
+
+		Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_LOCAL_ID, oldLocal));
+		Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, ""));
+		MpiClientConfiguration.getInstance().clearCache();
+	}
+	
+	/**
+	 * Tests that the correlation routine works properly
+	 */
+	@Test
+	public void testCanResolveLocalPatientIdentifier() throws HL7Exception, RegexSyntaxException {
+		
+		// Message containing TEST domain
+		String aMessageWithPID = "MSH|^~\\&|CR1^^|MOH_CAAT^^|TEST_HARNESS^^|TEST^^|20141104174451||RSP^K23^RSP_K21|TEST-CR-05-10|P|2.5\r" + 
+				"PID|||RJ-999^^^TEST&1.2.3.4.5&ISO||SMITH^JENNIFER^^^^^L|SMITH^^^^^^L|19840125|F|||123 Main Street West ^^NEWARK^NJ^30293||^PRN^PH^^^409^3049506||||||";
+
+		// Register patient 
+		Patient testPatient = new Patient();
+		testPatient.setGender("M");
+		testPatient.setBirthdate(new Date());
+		testPatient.addName(new PersonName("JENNIFER",null, "SMITH"));
+		testPatient.getNames().iterator().next().setPreferred(true);
+		PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierTypeByName("Test 1");
+		testPatient.addIdentifier(new PatientIdentifier("RJ-999", pit, Context.getLocationService().getDefaultLocation()));
+		testPatient.getPatientIdentifier().setPreferred(true);
+		
+		// Save
+		Context.getPatientService().savePatient(testPatient);
+		
+		// Now parse the message
+		Message mut = new PipeParser().parse(aMessageWithPID);
+		try {
+			Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, "TEST"));
+
+			List<MpiPatient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
+			Assert.assertEquals(1, pat.size());
+			Assert.assertEquals(testPatient.getId(), pat.get(0).getId());
+		} catch (MpiClientException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, ""));
+		}
+		
+	}
+	
+	/**
 	 * Test the interpretation of the PID segment
 	 * @throws HL7Exception 
 	 * @throws EncodingNotSupportedException 

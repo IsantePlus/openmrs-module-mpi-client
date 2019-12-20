@@ -81,6 +81,11 @@
 		<defaultValue>2100</defaultValue>
 		<description>Identifies the port of the PIX interface</description>
 	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.pid.correlation</property>
+		<defaultValue></defaultValue>
+		<description>The preferred correlation identity</description>
+	</globalProperty>
     <globalProperty>
 		<property>mpi-client.pid.enterprise</property>
 		<defaultValue>ENTID</defaultValue>
@@ -100,6 +105,11 @@
 		<property>mpi-client.security.authtoken</property>
 		<defaultValue></defaultValue>
 		<description>If the MPI requires an authentication token in MSH-8 enter it here</description>
+	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.backgrounThreads</property>
+		<defaultValue>false</defaultValue>
+		<description>When true indicates that ADT messages should be sent on a background thread</description>
 	</globalProperty>
     <globalProperty>
 		<property>mpi-client.security.trustStore</property>

@@ -27,19 +27,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.persistence.metamodel.IdentifiableType;
-import javax.xml.bind.JAXBElement;
-import javax.xml.bind.JAXBException;
-import javax.xml.namespace.QName;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.marc.everest.datatypes.II;
 import org.marc.everest.datatypes.TS;
-import org.openmrs.ImplementationId;
 import org.openmrs.Location;
-import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
@@ -48,17 +40,12 @@ import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
-import org.openmrs.Provider;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
-import org.openmrs.util.OpenmrsConstants;
-import org.springframework.beans.factory.xml.NamespaceHandlerResolver;
-
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.XsiNilLoader.Array;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.app.Connection;
@@ -74,6 +61,7 @@ import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.model.Segment;
 import ca.uhn.hl7v2.model.Structure;
 import ca.uhn.hl7v2.model.Type;
+import ca.uhn.hl7v2.model.v23.segment.VAR;
 import ca.uhn.hl7v2.model.v25.datatype.CX;
 import ca.uhn.hl7v2.model.v25.datatype.XAD;
 import ca.uhn.hl7v2.model.v25.datatype.XPN;
@@ -83,10 +71,8 @@ import ca.uhn.hl7v2.model.v25.segment.MSH;
 import ca.uhn.hl7v2.model.v25.segment.NK1;
 import ca.uhn.hl7v2.model.v25.segment.PID;
 import ca.uhn.hl7v2.model.v25.segment.SFT;
-import ca.uhn.hl7v2.parser.EncodingCharacters;
 import ca.uhn.hl7v2.parser.PipeParser;
 import ca.uhn.hl7v2.util.Terser;
-import net.sf.saxon.om.DocumentInfo;
 import net.sf.saxon.regex.RegexSyntaxException;
 
 
@@ -273,35 +259,55 @@ public final class MessageUtil {
 	private void updatePID(PID pid, Patient patient, boolean localIdOnly) throws HL7Exception, RegexSyntaxException {
 
 		// Update the pid segment with data in the patient
+		HashMap<String, String> exportIdentifiers = this.m_configuration.getLocalPatientIdentifierTypeMap();
 		
 		// PID-3
-		if(this.m_configuration.getLocalPatientIdRoot().matches("^(\\d+?\\.){1,}\\d+$") ) {
-			pid.getPatientIdentifierList(0).getAssigningAuthority().getUniversalID().setValue(this.m_configuration.getLocalPatientIdRoot());
-			pid.getPatientIdentifierList(0).getAssigningAuthority().getUniversalIDType().setValue("ISO");
-		}
-		else 
-			pid.getPatientIdentifierList(0).getAssigningAuthority().getNamespaceID().setValue(this.m_configuration.getLocalPatientIdRoot());
-
-		pid.getPatientIdentifierList(0).getIDNumber().setValue(patient.getId().toString());
-		pid.getPatientIdentifierList(0).getIdentifierTypeCode().setValue("PI");
-		
-		// Other identifiers
-		if(!localIdOnly) {
-
-			HashMap<String, String> exportIdentifiers = this.m_configuration.getLocalPatientIdentifierTypeMap();
+		if("-".equals(this.m_configuration.getLocalPatientIdRoot())) {
 			
-			// Export IDs
-			for(PatientIdentifier patIdentifier : patient.getIdentifiers())
-			{
-				String domain = exportIdentifiers.get(patIdentifier.getIdentifierType().getName());
-				if(domain != null) {
-					CX cx = pid.getPatientIdentifierList(pid.getPatientIdentifierList().length);
-					this.updateCX(cx, patIdentifier, domain);
-				}
+			// Preferred domain
+			String domain = this.m_configuration.getPreferredCorrelationDomain();
+			if(domain == null || domain.isEmpty())
+				throw new HL7Exception("Cannot determine update correlation id, please set a preferred correlation identity domain");
+			else {
 				
+				CX cx = pid.getPatientIdentifierList(pid.getPatientIdentifierList().length);
+				
+				for(PatientIdentifier patIdentifier : patient.getIdentifiers())
+				{
+					String thisDomain = exportIdentifiers.get(patIdentifier.getIdentifierType().getName());
+					if(domain.equals(thisDomain)) {
+						this.updateCX(cx, patIdentifier, domain);
+					}
+				}
 			}
 		}
+		else {
+			if(this.m_configuration.getLocalPatientIdRoot().matches("^(\\d+?\\.){1,}\\d+$") ) {
+				pid.getPatientIdentifierList(0).getAssigningAuthority().getUniversalID().setValue(this.m_configuration.getLocalPatientIdRoot());
+				pid.getPatientIdentifierList(0).getAssigningAuthority().getUniversalIDType().setValue("ISO");
+			}
+			else 
+				pid.getPatientIdentifierList(0).getAssigningAuthority().getNamespaceID().setValue(this.m_configuration.getLocalPatientIdRoot());
+	
+			pid.getPatientIdentifierList(0).getIDNumber().setValue(patient.getId().toString());
+			pid.getPatientIdentifierList(0).getIdentifierTypeCode().setValue("PI");
+			
 		
+			// Other identifiers
+			if(!localIdOnly) {
+	
+				// Export IDs
+				for(PatientIdentifier patIdentifier : patient.getIdentifiers())
+				{
+					String domain = exportIdentifiers.get(patIdentifier.getIdentifierType().getName());
+					if(domain != null) {
+						CX cx = pid.getPatientIdentifierList(pid.getPatientIdentifierList().length);
+						this.updateCX(cx, patIdentifier, domain);
+					}
+					
+				}
+			}
+		}
 		// Names
 		for(PersonName pn : patient.getNames())
 			if(!pn.getFamilyName().equals("(none)") && !pn.getGivenName().equals("(none)"))
@@ -603,6 +609,7 @@ public final class MessageUtil {
 			for(Structure pidStruct : queryResponseGroup.getAll("PID")) // Parsing PID
 			{
 				PID pid = (PID)pidStruct;
+				
 				// Attempt to load a patient by identifier
 				for(CX id : pid.getPatientIdentifierList())
 				{
@@ -617,6 +624,20 @@ public final class MessageUtil {
 							this.log.warn(String.format("Patient identifier %s in %s claims to be from local domain but is not in a valid format", id.getIDNumber().getName(), id.getAssigningAuthority().getNamespaceID().getValue()));
 							continue;
 						}
+					}
+					// ID is the preferred correlation domain
+					else if(this.m_configuration.getPreferredCorrelationDomain() != null && !this.m_configuration.getPreferredCorrelationDomain().isEmpty() &&
+							(this.m_configuration.getPreferredCorrelationDomain().equals(id.getAssigningAuthority().getNamespaceID().getValue()) ||
+								this.m_configuration.getPreferredCorrelationDomain().equals(id.getAssigningAuthority().getUniversalID().getValue()))
+							) {
+						
+						PatientIdentifier patientIdentifier = this.interpretCx(id);
+						List<PatientIdentifierType> identifierTypes= new ArrayList<PatientIdentifierType>();
+						identifierTypes.add(patientIdentifier.getIdentifierType());
+						List<Patient> matchPatient = Context.getPatientService().getPatients(null, patientIdentifier.getIdentifier(), identifierTypes, false);
+						
+						if(matchPatient != null && matchPatient.size() >0)
+							patient.setId(matchPatient.get(0).getId());
 					}
 					else {
 						PatientIdentifier patId = this.interpretCx(id);

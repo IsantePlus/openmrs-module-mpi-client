@@ -57,6 +57,7 @@ import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.util.AuditUtil;
+import org.openmrs.module.santedb.mpiclient.util.MessageDispatchWorker;
 import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
 
 import ca.uhn.hl7v2.HL7Exception;
@@ -132,6 +133,8 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	 */
 	public List<MpiPatient> searchPatient(String familyName, String givenName,
 			Date dateOfBirth, boolean fuzzyDate, String gender,
+			String stateOrRegion, 
+			String cityOrTownship,
 			PatientIdentifier identifier,
 			PatientIdentifier mothersIdentifier) throws MpiClientException {
 
@@ -179,6 +182,14 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 				else
 					queryParams.put("@PID.21.4", mothersIdentifier.getIdentifierType().getName());
 			}
+		}
+		if(stateOrRegion != null && !stateOrRegion.isEmpty())
+		{
+			queryParams.put("@PID.11.4", stateOrRegion);
+		}
+		if(cityOrTownship != null && !cityOrTownship.isEmpty())
+		{
+			queryParams.put("@PID.11.3", cityOrTownship);
 		}
 			
 		AuditMessage auditMessage = null;
@@ -410,14 +421,24 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 
 		try
 		{
+		
 			admitMessage = this.m_messageUtil.createAdmit(patient);
-			Message response = this.m_messageUtil.sendMessage(admitMessage, this.m_configuration.getPixEndpoint(), this.m_configuration.getPixPort());
-			
-			Terser terser = new Terser(response);
-			log.info(String.format("Message indicates: %s", terser.get("/MSA-1")));
-			if(!terser.get("/MSA-1").endsWith("A"))
-				throw new MpiClientException(String.format("Error from MPI :> %s", terser.get("/MSA-1")), response);
 			auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, true);
+			
+			if(this.m_configuration.getUseBackgroundThreads())
+			{
+				MessageDispatchWorker worker = new MessageDispatchWorker(admitMessage, auditMessage, this.m_configuration.getPixEndpoint(), this.m_configuration.getPixPort());
+				worker.start();
+				auditMessage = null; // prevent sending
+			}
+			else {
+				Message response = this.m_messageUtil.sendMessage(admitMessage, this.m_configuration.getPixEndpoint(), this.m_configuration.getPixPort());
+			
+				Terser terser = new Terser(response);
+				log.info(String.format("Message indicates: %s", terser.get("/MSA-1")));
+				if(!terser.get("/MSA-1").endsWith("A"))
+					throw new MpiClientException(String.format("Error from MPI :> %s", terser.get("/MSA-1")), response);
+			}			
 
 		}
 		catch(MpiClientException e)
@@ -606,56 +627,12 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	            if(this.m_logger == null)
 	            {
             		this.m_configuration = MpiClientConfiguration.getInstance();	
-            		this.m_logger = this.createLoggerDevice().getDeviceExtension(AuditLogger.class);
+            		this.m_logger = AuditUtil.getInstance().createLoggerDevice().getDeviceExtension(AuditLogger.class);
 	            }
             }
 		}
 		return this.m_logger;
 	}
 
-	/**
-	 * Create logger device
-	 */
-	private Device createLoggerDevice() { 
-		Device device = new Device(String.format("%s^^^%s", this.m_configuration.getLocalApplication(), this.m_configuration.getLocalFacility()));
-
-		
-		Connection transportConnection = new Connection(this.m_configuration.getAuditRepositoryTransport(), this.m_configuration.getAuditRepositoryEndpoint());
-		
-		// UDP
-		if("audit-udp".equals(transportConnection.getCommonName()))
-		{
-			transportConnection.setClientBindAddress("0.0.0.0");
-			transportConnection.setProtocol(Connection.Protocol.SYSLOG_UDP);
-		}
-		else if("audit-tcp".equals(transportConnection.getCommonName()))
-		{
-			transportConnection.setProtocol(Connection.Protocol.DICOM);
-		}
-		else if("audit-tls".equals(transportConnection.getCommonName()))
-		{
-			transportConnection.setProtocol(Connection.Protocol.SYSLOG_TLS);
-			transportConnection.setTlsCipherSuites("TLS_RSA_WITH_AES_128_CBC_SHA");
-		}
-		else
-			throw new IllegalArgumentException("Connection must be audit-tls or audit-udp");
-
-		transportConnection.setPort(this.m_configuration.getAuditRepositoryPort());
-		
-		device.addConnection(transportConnection);
-		
-		AuditRecordRepository repository = new AuditRecordRepository();
-		device.addDeviceExtension(repository);
-		repository.addConnection(transportConnection);
-
-		AuditLogger logger = new AuditLogger();
-		device.addDeviceExtension(logger);
-		logger.addConnection(transportConnection);
-		logger.setAuditRecordRepositoryDevice(device);
-		logger.setSchemaURI(AuditMessages.SCHEMA_URI);
-		
-		return device;
-		
-	}
 	
 }

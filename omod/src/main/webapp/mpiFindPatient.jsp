@@ -34,7 +34,9 @@
 				</tr>
 				<tr>             
 					<td>Identifier</td>
-					<td colspan="3"><input type="text" name="identifier" value="${patientSearch.identifier }"/><input type="checkbox" name="momsId" id="momsId" value="true" <c:if test='${patientSearch.momsId == "true" }'>checked="checked"</c:if>/><label for="momsId"> Mother's Identifier</label></td>
+					<td><input type="text" name="identifier" value="${patientSearch.identifier}"/><input type="checkbox" name="momsId" id="momsId" value="true" <c:if test='${patientSearch.momsId == "true" }'>checked="checked"</c:if>/><label for="momsId"> Mother's Identifier</label></td>
+					<td>City or Township</td>
+					<td><input type="text" name="address" value="${patientSearch.address}"/></td>
 				</tr>
 			</table>
 			<br /> <input id="searchSubmit"   type="submit" value="Search"> <br />

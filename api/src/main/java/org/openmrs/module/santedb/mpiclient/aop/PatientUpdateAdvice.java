@@ -16,25 +16,13 @@
  */
 package org.openmrs.module.santedb.mpiclient.aop;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.marc.everest.datatypes.TS;
+
+import java.lang.reflect.Method;
+
 import org.openmrs.Patient;
-import org.openmrs.PatientIdentifier;
-import org.openmrs.PatientIdentifierType;
-import org.openmrs.PersonAttribute;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.santedb.mpiclient.MpiClientActivator;
-import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
-import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
-import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.springframework.aop.AfterReturningAdvice;
 
 /**
@@ -42,54 +30,19 @@ import org.springframework.aop.AfterReturningAdvice;
  */
 public class PatientUpdateAdvice implements AfterReturningAdvice {
 	
-	private final Log log = LogFactory.getLog(this.getClass());
-
-	private final MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
+	
 	
 	/**
 	 * Runs everytime a patient a updated
 	 * @see org.springframework.aop.AfterReturningAdvice#afterReturning(java.lang.Object, java.lang.reflect.Method, java.lang.Object[], java.lang.Object)
 	 */
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
+		
+		
 		if(method.getName().equals("savePatient") && target instanceof PatientService)
 		{
-			log.info("Sending update to the MPI for new patient data...");
-			try
-			{
-				Patient patient = (Patient)returnValue;
-				MpiClientService hieService = Context.getService(MpiClientService.class);
-
-				hieService.exportPatient(patient);
-		
-				// Grab the national health ID for the patient
-				if(!this.m_configuration.getNationalPatientIdRoot().isEmpty()) {
-					
-					// Find the value for the NHID
-					HashMap<String, String> identifierMaps = this.m_configuration.getLocalPatientIdentifierTypeMap();
-					PatientIdentifierType pit = null;
-					for(String key : identifierMaps.keySet())
-						if(this.m_configuration.getNationalPatientIdRoot().equals(identifierMaps.get(key)))
-						{
-							pit = Context.getPatientService().getPatientIdentifierTypeByName(key);
-							break;
-						}
-					
-					if(pit != null && patient.getPatientIdentifier(pit) == null &&
-							patient.getPatientIdentifier(pit) == null) {
-						PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, this.m_configuration.getNationalPatientIdRoot());
-						if(pid != null) {
-							pid.setPatient(patient);
-							Context.getPatientService().savePatientIdentifier(pid);
-						}
-					}
-				}
-				
-			}
-			catch(MpiClientException e)
-			{
-				log.error(e);
-				throw e;
-			}
+			PatientUpdateWorker worker = new PatientUpdateWorker((Patient)returnValue, Context.getUserContext());
+			worker.start();
 		}
 		else if(method.getName().equals("mergePatients") && target instanceof PatientService) {
 			// TODO:
