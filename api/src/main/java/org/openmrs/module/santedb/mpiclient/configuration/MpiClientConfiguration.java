@@ -87,12 +87,14 @@ public class MpiClientConfiguration {
      */
     private <T> T getOrCreateGlobalProperty(String propertyName, T defaultValue)
     {
-		Object retVal = this.m_cachedProperties.get(propertyName);
+    	// For debugging purposes caching of properties disabled
+		//Object retVal = this.m_cachedProperties.get(propertyName);
 		
-		if(retVal != null)
-			return (T)retVal;
-		else 
-		{
+		//if(retVal != null)
+		//	return (T)retVal;
+		//else 
+		//{
+    	
 			String propertyValue = Context.getAdministrationService().getGlobalProperty(propertyName);
 			this.log.info(String.format("Loaded MPI property: %s", propertyValue));
 			if(propertyValue != null && !propertyValue.isEmpty())
@@ -111,7 +113,7 @@ public class MpiClientConfiguration {
                 }
 				return defaultValue;
 			}
-		}
+		//}
     }
 
 	
