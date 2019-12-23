@@ -358,6 +358,50 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	}
 	
 	/**
+	 * Tests that the system can resolve multiple domain identities
+	 */
+	@Test
+	public void testCanResolveMultiDomains() throws HL7Exception, RegexSyntaxException {
+		
+		try {
+			Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, "1.2.3.4.5"));
+			MpiClientConfiguration.getInstance().clearCache();
+		
+			// Register patient 
+			Patient testPatient = new Patient();
+			testPatient.setGender("F");
+			testPatient.setBirthdate(new Date());
+			testPatient.addName(new PersonName("JENNIFER",null, "SMITH"));
+			testPatient.getNames().iterator().next().setPreferred(true);
+			PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierTypeByName("Test 1");
+			testPatient.addIdentifier(new PatientIdentifier("RJ-9991", pit, Context.getLocationService().getDefaultLocation()));
+			testPatient.getPatientIdentifier().setPreferred(true);
+			
+	
+			// Save
+			Context.getPatientService().savePatient(testPatient);
+			
+			// Verify domains can be resolved when passing in by code
+			Message pixQuery = MessageUtil.getInstance().createPixMessage(testPatient, "DOMAIN1", "DOMAIN2");
+			String messageEr7 = new PipeParser().encode(pixQuery);
+			Assert.assertTrue("Message should contain domain 1", messageEr7.contains("^^^DOMAIN1"));
+			Assert.assertTrue("Message should contain domain 2", messageEr7.contains("^^^DOMAIN2"));
+			
+			// Verify domains can be resolve passing in array
+			String[] domains = new String[] { "DOMAIN1", "DOMAIN2" };
+			pixQuery = MessageUtil.getInstance().createPixMessage(testPatient, domains);
+			messageEr7 = new PipeParser().encode(pixQuery);
+			Assert.assertTrue("Message should contain domain 1", messageEr7.contains("^^^DOMAIN1"));
+			Assert.assertTrue("Message should contain domain 2", messageEr7.contains("^^^DOMAIN2"));
+		}
+		finally {
+			Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, ""));
+			MpiClientConfiguration.getInstance().clearCache();
+
+		}
+	}
+	
+	/**
 	 * Tests that the correlation routine works properly
 	 */
 	@Test
@@ -365,7 +409,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 		
 		// Message containing TEST domain
 		String aMessageWithPID = "MSH|^~\\&|CR1^^|MOH_CAAT^^|TEST_HARNESS^^|TEST^^|20141104174451||RSP^K23^RSP_K21|TEST-CR-05-10|P|2.5\r" + 
-				"PID|||RJ-999^^^TEST&1.2.3.4.5&ISO||SMITH^JENNIFER^^^^^L|SMITH^^^^^^L|19840125|F|||123 Main Street West ^^NEWARK^NJ^30293||^PRN^PH^^^409^3049506||||||";
+				"PID|||RJ-1999^^^TEST&1.2.3.4.5&ISO||SMITH^JENNIFER^^^^^L|SMITH^^^^^^L|19840125|F|||123 Main Street West ^^NEWARK^NJ^30293||^PRN^PH^^^409^3049506||||||";
 
 		// Register patient 
 		Patient testPatient = new Patient();
@@ -374,7 +418,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 		testPatient.addName(new PersonName("JENNIFER",null, "SMITH"));
 		testPatient.getNames().iterator().next().setPreferred(true);
 		PatientIdentifierType pit = Context.getPatientService().getPatientIdentifierTypeByName("Test 1");
-		testPatient.addIdentifier(new PatientIdentifier("RJ-999", pit, Context.getLocationService().getDefaultLocation()));
+		testPatient.addIdentifier(new PatientIdentifier("RJ-1999", pit, Context.getLocationService().getDefaultLocation()));
 		testPatient.getPatientIdentifier().setPreferred(true);
 		
 		// Save
@@ -383,16 +427,23 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 		// Now parse the message
 		Message mut = new PipeParser().parse(aMessageWithPID);
 		try {
-			Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, "TEST"));
-
+			Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, "1.2.3.4.5"));
+			MpiClientConfiguration.getInstance().clearCache();
 			List<MpiPatient> pat = MessageUtil.getInstance().interpretPIDSegments(mut);
 			Assert.assertEquals(1, pat.size());
 			Assert.assertEquals(testPatient.getId(), pat.get(0).getId());
+			
+			// Now testthat the resolution message is appropriate
+			Message pixQuery = MessageUtil.getInstance().createPixMessage(testPatient, "NHID");
+			String messageRaw = new PipeParser().encode(pixQuery);
+			Assert.assertFalse("PIX message should not contain local ID", messageRaw.contains(testPatient.getId().toString()));
+			Assert.assertTrue("PIX message should contain the preferred correlation ID", messageRaw.contains("RJ-1999"));
 		} catch (MpiClientException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally {
 			Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, ""));
+			MpiClientConfiguration.getInstance().clearCache();
 		}
 		
 	}

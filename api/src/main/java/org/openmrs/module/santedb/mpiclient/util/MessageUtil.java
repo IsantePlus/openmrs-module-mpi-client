@@ -148,7 +148,7 @@ public final class MessageUtil {
 	
 	
 	/**
-	 * Create a PDQ message based on the search parameters
+	 * Create a Patient ID XREF Query
 	 * @throws HL7Exception 
 	 */
 	public Message createPdqMessage(Map<String, String> queryParameters) throws HL7Exception
@@ -638,6 +638,7 @@ public final class MessageUtil {
 						
 						if(matchPatient != null && matchPatient.size() >0)
 							patient.setId(matchPatient.get(0).getId());
+						patient.addIdentifier(patientIdentifier);
 					}
 					else {
 						PatientIdentifier patId = this.interpretCx(id);
@@ -930,32 +931,67 @@ public final class MessageUtil {
 	 * Create a PIX message
 	 * @throws HL7Exception 
 	 */
-	public Message createPixMessage(Patient patient, String toAssigningAuthority) throws HL7Exception {
+	public Message createPixMessage(Patient patient, String... toAssigningAuthorities) throws HL7Exception {
 		QBP_Q21 retVal = new QBP_Q21();
 		this.updateMSH(retVal.getMSH(), "QBP", "Q23");
 		retVal.getMSH().getVersionID().getVersionID().setValue("2.5");
 
 		Terser queryTerser = new Terser(retVal);
-		queryTerser.set("/QPD-3-1", patient.getId().toString());
 		
 		// Determine if the ID root is an OID or name
-		if(this.m_configuration.getLocalPatientIdRoot().matches("^(\\d+?\\.){1,}\\d+$"))
-		{
-			queryTerser.set("/QPD-3-4-2", this.m_configuration.getLocalPatientIdRoot());
-			queryTerser.set("/QPD-3-4-3", "ISO");
+		if(!this.m_configuration.getPreferredCorrelationDomain().isEmpty()) {
+
+			
+			// Affix the patient's preferred correlation domain identifier
+			for(PatientIdentifier pid : patient.getIdentifiers()) {
+				String domainName = this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName());
+				
+				if(this.m_configuration.getPreferredCorrelationDomain().equals(domainName)) // This is the identifier we want
+				{
+					queryTerser.set("/QPD-3-1", pid.getIdentifier());
+					break;
+				}
+				
+			}
+			
+			if(queryTerser.get("/QPD-3-1") == null || queryTerser.get("/QPD-3-1").isEmpty())
+			{
+				log.error(String.format("Patient with id %s does not have any identifier in domain %s . It is unsafe to send this message to the central MPI, therefore no reuslts will be retured. Please ensure that your correlation identifier is mandatory for all patients", patient.getId(), this.m_configuration.getPreferredCorrelationDomain()));
+				queryTerser.set("/QPD-3-1", "XX-NORETURN--XX-" + UUID.randomUUID().toString()); // HACK: This should throw some sort of error, however in lieu of this we'll log and guarantee that no results come back
+			}
+			
+			
+			if(this.m_configuration.getPreferredCorrelationDomain().matches("^(\\d+?\\.){1,}\\d+$"))
+			{
+				queryTerser.set("/QPD-3-4-2", this.m_configuration.getPreferredCorrelationDomain());
+				queryTerser.set("/QPD-3-4-3", "ISO");
+			}
+			else 
+				queryTerser.set("/QPD-3-4-1", this.m_configuration.getPreferredCorrelationDomain());
 		}
-		else 
-			queryTerser.set("/QPD-3-4-1", this.m_configuration.getLocalPatientIdRoot());
-		
-		// To domain
-		if(toAssigningAuthority.matches("^(\\d+?\\.){1,}\\d+$"))
-		{
-			queryTerser.set("/QPD-4-4-2", toAssigningAuthority);
-			queryTerser.set("/QPD-4-4-3", "ISO");
+		else {
+			queryTerser.set("/QPD-3-1", patient.getId().toString());
+			if(this.m_configuration.getLocalPatientIdRoot().matches("^(\\d+?\\.){1,}\\d+$"))
+			{
+				queryTerser.set("/QPD-3-4-2", this.m_configuration.getLocalPatientIdRoot());
+				queryTerser.set("/QPD-3-4-3", "ISO");
+			}
+			else 
+				queryTerser.set("/QPD-3-4-1", this.m_configuration.getLocalPatientIdRoot());
 		}
-		else
-			queryTerser.set("/QPD-4-4-1", toAssigningAuthority);
 		
+		int rep = 0;
+		for(String toAssigningAuthority : toAssigningAuthorities) {
+			// To domain
+			if(toAssigningAuthority.matches("^(\\d+?\\.){1,}\\d+$"))
+			{
+				queryTerser.set(String.format("/QPD-4(%s)-4-2", rep), toAssigningAuthority);
+				queryTerser.set(String.format("/QPD-4(%s)-4-3", rep), "ISO");
+			}
+			else
+				queryTerser.set(String.format("/QPD-4(%s)-4-1", rep), toAssigningAuthority);
+			rep++;
+		}
 		return retVal;
 	}
 

@@ -77,7 +77,7 @@ public class MpiClientConfiguration {
 	
 	public static final String PROP_NAME_USE_THREADS = "mpi-client.backgrounThreads";
 	public static final String PROP_NAME_PREFER_CORR_AA = "mpi-client.pid.correlation";
-	
+	public static final String PROP_NAME_AUTO_PIX = "mpi-client.pid.autoXref";
 	
     private Map<String, Object> m_cachedProperties = new HashMap<String, Object>();
 
@@ -158,6 +158,14 @@ public class MpiClientConfiguration {
 	 */
 	public String getPreferredCorrelationDomain() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_PREFER_CORR_AA, "");
+	}
+	
+	/**
+	 * Gets whether background threads are to be used
+	 * @return
+	 */
+	public String getAutomaticCrossReferenceDomains() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_AUTO_PIX, this.getNationalPatientIdRoot());
 	}
 	
 	/**

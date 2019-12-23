@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 import org.openmrs.Patient;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.springframework.aop.AfterReturningAdvice;
 
 /**
@@ -44,6 +45,8 @@ public class PatientUpdateAdvice implements AfterReturningAdvice {
 			PatientUpdateWorker worker = new PatientUpdateWorker((Patient)returnValue, Context.getUserContext());
 			worker.start();
 		}
+		else if(method.getName().equals("saveGlobalProperty"))
+			MpiClientConfiguration.getInstance().clearCache();
 		else if(method.getName().equals("mergePatients") && target instanceof PatientService) {
 			// TODO:
 //			log.info("Sending patient merge to the MPI ...");
