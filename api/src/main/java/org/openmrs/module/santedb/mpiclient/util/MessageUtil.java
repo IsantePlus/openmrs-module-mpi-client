@@ -458,11 +458,11 @@ public final class MessageUtil {
 		String nameRewrite = this.m_configuration.getNameRewriteRule();
 		
 		if(nameRewrite == null || nameRewrite.isEmpty()) {
-			if(pn.getFamilyName() != null && !pn.getFamilyName().equals("(none)"))
+			if(pn.getFamilyName() != null && !pn.getFamilyName().equals("(NULL)"))
 				xpn.getFamilyName().getSurname().setValue(pn.getFamilyName());
 			if(pn.getFamilyName2() != null)
 				xpn.getFamilyName().getSurnameFromPartnerSpouse().setValue(pn.getFamilyName2());
-			if(pn.getGivenName() != null && !pn.getGivenName().equals("(none)"))
+			if(pn.getGivenName() != null && !pn.getGivenName().equals("(NULL)"))
 				xpn.getGivenName().setValue(pn.getGivenName());
 			if(pn.getMiddleName() != null)
 				xpn.getSecondAndFurtherGivenNamesOrInitialsThereof().setValue(pn.getMiddleName());
