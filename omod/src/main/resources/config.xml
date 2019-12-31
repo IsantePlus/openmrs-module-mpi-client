@@ -63,7 +63,7 @@
 	/Required Global Properties -->
 	<globalProperty>
 		<property>mpi-client.endpoint.pdq.addr</property>
-		<defaultValue>192.168.0.44</defaultValue>
+		<defaultValue>192.168.199.201</defaultValue>
 		<!-- <defaultValue>mpi.domain.com</defaultValue> -->
 		<description>Identifies the location of the PDQ endpoint</description>
 	</globalProperty>
@@ -75,7 +75,7 @@
 	</globalProperty>
 	<globalProperty>
 		<property>mpi-client.endpoint.pix.addr</property>
-		<defaultValue>192.168.0.44</defaultValue>
+		<defaultValue>192.168.199.201</defaultValue>
 <!-- 		<defaultValue>mpi.domain.com</defaultValue> -->
 		<description>Identifies the location of the PIX endpoint</description>
 	</globalProperty>
@@ -150,7 +150,7 @@
 	</globalProperty>
     <globalProperty>
 		<property>mpi-client.endpoint.ar.addr</property>
-		<defaultValue>192.168.0.44</defaultValue>
+		<defaultValue>192.168.199.201</defaultValue>
 <!-- 		<defaultValue>ar.domain.com</defaultValue> -->
 		<description>The address of the audit repository node</description>
 	</globalProperty>	
@@ -164,6 +164,12 @@
 		<defaultValue>11514</defaultValue>
 <!-- 		<defaultValue>514</defaultValue> -->
 		<description>The port # to use when sending the audits</description>
+	</globalProperty>	
+	<globalProperty>
+		<property>mpi-client.endpoint.ar.bind</property>
+		<defaultValue>192.168.199.102</defaultValue>
+<!-- 		<defaultValue></defaultValue> -->
+		<description>The local bind address for UDP connection</description>
 	</globalProperty>	
     <globalProperty>
 		<property>mpi-client.msg.sendingApplication</property>

@@ -62,6 +62,7 @@ public class MpiClientConfiguration {
 	public static final String PROP_NAME_AR_ENDPOINT = "mpi-client.endpoint.ar.addr";
 	public static final String PROP_NAME_AR_TRANSPORT = "mpi-client.endpoint.ar.transport";
 	public static final String PROP_NAME_AR_PORT = "mpi-client.endpoint.ar.port";
+	public static final String PROP_NAME_AR_LOCAL = "mpi-client.endpoint.ar.bind";
 	
 	public static final String PROP_NAME_SND_NAME = "mpi-client.msg.sendingApplication";
 	public static final String PROP_NAME_SND_FAC = "mpi-client.msg.sendingFacility";
@@ -352,4 +353,5 @@ public class MpiClientConfiguration {
     
     public String getNameRewriteRule() { return this.getOrCreateGlobalProperty(PROP_NAME_PAT_NAME_REWRITE, ""); }
 
+    public String getAuditRepositoryBindAddress() { return this.getOrCreateGlobalProperty(PROP_NAME_AR_LOCAL, ""); }
 }

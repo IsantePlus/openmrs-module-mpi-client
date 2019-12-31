@@ -110,7 +110,10 @@ public class AuditUtil {
 		// UDP
 		if("audit-udp".equals(transportConnection.getCommonName()))
 		{
-			transportConnection.setClientBindAddress("0.0.0.0");
+			if(this.m_configuration.getAuditRepositoryBindAddress().isEmpty())
+				transportConnection.setClientBindAddress(null);
+			else 
+				transportConnection.setClientBindAddress(this.m_configuration.getAuditRepositoryBindAddress());
 			transportConnection.setProtocol(Connection.Protocol.SYSLOG_UDP);
 		}
 		else if("audit-tcp".equals(transportConnection.getCommonName()))
