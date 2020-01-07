@@ -29,7 +29,7 @@ import org.springframework.aop.AfterReturningAdvice;
 /**
  * After returning from the save method of the Patient service
  */
-public class PatientUpdateAdvice implements AfterReturningAdvice {
+public class PatientSynchronizationAdvice implements AfterReturningAdvice {
 	
 	
 	
@@ -43,6 +43,11 @@ public class PatientUpdateAdvice implements AfterReturningAdvice {
 		if(method.getName().equals("savePatient") && target instanceof PatientService)
 		{
 			PatientUpdateWorker worker = new PatientUpdateWorker((Patient)returnValue, Context.getUserContext());
+			worker.start();
+		}
+		else if(method.getName().equals("getPatient"))
+		{
+			PatientSyncWorker worker = new PatientSyncWorker((Patient)returnValue, Context.getUserContext());
 			worker.start();
 		}
 		else if(method.getName().equals("saveGlobalProperty"))

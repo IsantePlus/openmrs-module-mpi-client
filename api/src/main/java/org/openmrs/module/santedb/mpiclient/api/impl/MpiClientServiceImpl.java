@@ -145,8 +145,14 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			queryParams.put("@PID.5.2", givenName);
 		if(dateOfBirth != null)
 		{
-			if(fuzzyDate)
-				queryParams.put("@PID.7", new SimpleDateFormat("yyyy").format(dateOfBirth));
+			if(fuzzyDate) {
+				if(this.m_configuration.getPdqDateFuzz() == 0)
+					queryParams.put("@PID.7", new SimpleDateFormat("yyyy").format(dateOfBirth));
+				else {
+					for(Integer i = dateOfBirth.getYear() - this.m_configuration.getPdqDateFuzz(); i < dateOfBirth.getYear() + this.m_configuration.getPdqDateFuzz(); i++)
+						queryParams.put("@PID.7", i.toString());
+				}
+			}
 			else
 				queryParams.put("@PID.7", new SimpleDateFormat("yyyyMMdd").format(dateOfBirth));
 		}

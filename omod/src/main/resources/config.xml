@@ -32,7 +32,7 @@
 	
 	<advice>
 		 <point>org.openmrs.api.PatientService</point>
-		 <class>${project.parent.groupId}.santedb.mpiclient.aop.PatientUpdateAdvice</class>
+		 <class>${project.parent.groupId}.santedb.mpiclient.aop.PatientSynchronizationAdvice</class>
 	</advice>
 	<!-- AOP
 	<advice>
@@ -97,6 +97,10 @@
 	</globalProperty>
 	<globalProperty>
 		<property>mpi-client.pid.autoXref</property>
+		<!-- For MM PROD 
+		MOIP_NRC,MOHS_DC_HIV_NAP,MOHS_DC_HIV_OMRS,MOHS_GEN_NHID
+		 -->
+		<!--  Value for CHAI TEST SYSTEM -->
 		<defaultValue>MM_NHID,MM_HIV_NAP_ART</defaultValue>
 <!-- 		<defaultValue>ENTID</defaultValue> -->
 		<description>A comma separated list of patient identity domains which should be automatically cross referenced from the MPI when registration is successful</description>
@@ -198,7 +202,7 @@
 	</globalProperty>		
     <globalProperty>
 		<property>mpi-client.ext.extendedAttributes</property>
-		<defaultValue>Father's Name:NK1-2-2?NK1-3=FTH,Mother's Name:PID-6-2</defaultValue>
+		<defaultValue>Father's Name:NK1-2-2?NK1-3=FTH,Mother's Name:PID-6-2,Place of Birth:PID-23,Telephone contact:PID-13,Email address:PID-14</defaultValue>
 		<description>PersonAttributes (in OpenMRS) you would like imported from the message. Format= attr_name:segment_path?segment_guard=guard_value, . For example, to copy NK1-2-2 to fathers name: Father's Name=NK1-2-2?NK1-3=FTH</description>
 	</globalProperty>		
 	
@@ -209,8 +213,17 @@
 	</globalProperty>
     <globalProperty>
 		<property>mpi-client.pid.exportIdentitiferType</property>
+		<!--  Final configuration for MM 
+		Patient ID=MOHS_DC_HIV_OMRS,National Health ID=MOHS_GEN_NHID,NAP ART Registration Number=MOHS_DC_HIV_NAP,TB Registration Number=MOHS_DC_TB_MDRTB_CASE,National ID=MOIP_NRC
+		-->
+		<!--  Configuration for test system at CHAI -->
 		<defaultValue>Patient ID=OMRS_HIV_PATIENT_ID,National Health ID=MM_NHID,NAP ART Registration Number=MM_HIV_NAP_ART,TB Registration Number=MM_MDRTB_CASE</defaultValue>
 		<description>When specified, indicates the patient identifier types and domains that should be exported (example: HIV Programme ID=HIV_ID)</description>
+	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.search.dateFuzz</property>
+		<defaultValue>2</defaultValue>
+		<description>The amount of fuzziness to add to fuzzy date searches</description>
 	</globalProperty>
 	<globalProperty>
 		<property>mpi-client.pid.defaultCountry</property>
