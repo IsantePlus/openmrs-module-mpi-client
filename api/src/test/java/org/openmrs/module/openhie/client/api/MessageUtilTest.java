@@ -18,6 +18,8 @@ package org.openmrs.module.openhie.client.api;
 
 import static org.junit.Assert.*;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -106,7 +108,27 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 		assertTrue("Must have @PID.5.1^SMITH", message.contains("@PID.5.1^SMITH"));
 		assertTrue("Must have @PID.5.2^JOHN", message.contains("@PID.5.2^JOHN"));
 	}
-
+	
+	/**
+	 * Test the create PDQ message 
+	 * @throws HL7Exception 
+	 * @throws ParseException 
+	 */
+	@Test
+	public void testCreatePdqMessageDob() throws HL7Exception, ParseException {
+		MessageUtil util = MessageUtil.getInstance();
+		Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_SEARCH_DATE_FUZZ, "1"));
+		final Date dobDate = new SimpleDateFormat("yyyyMMdd".substring(0, 4)).parse("1996");
+		
+		Message pdqMessage = util.createPdqMessage(new HashMap<String, String>() {{
+			put("@PID.7", "1995~1996~1997");
+		}});
+		String message = new PipeParser().encode(pdqMessage);
+		assertTrue("Must have @PID.7^1996", message.contains("@PID.7^1996"));
+		assertTrue("Must have @PID.7^1997", message.contains("@PID.7^1997"));
+		assertTrue("Must have @PID.7^1995", message.contains("@PID.7^1995"));
+	}
+	
 	/**
 	 * Test the create PDQ message 
 	 * @throws HL7Exception 

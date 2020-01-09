@@ -147,10 +147,15 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 		{
 			if(fuzzyDate) {
 				if(this.m_configuration.getPdqDateFuzz() == 0)
-					queryParams.put("@PID.7", new SimpleDateFormat("yyyy").format(dateOfBirth));
+					queryParams.put("@PID.7", new Integer(dateOfBirth.getYear() + 1900).toString());
 				else {
+					String queryParm = "";
 					for(Integer i = dateOfBirth.getYear() - this.m_configuration.getPdqDateFuzz(); i < dateOfBirth.getYear() + this.m_configuration.getPdqDateFuzz(); i++)
-						queryParams.put("@PID.7", i.toString());
+					{
+						log.warn(String.format("Including results with DOB - %s", i + 1900));
+						queryParm += new Integer(i + 1900).toString() + "~";
+					}
+					queryParams.put("@PID.7", queryParm.substring(0, queryParm.length() - 1));
 				}
 			}
 			else

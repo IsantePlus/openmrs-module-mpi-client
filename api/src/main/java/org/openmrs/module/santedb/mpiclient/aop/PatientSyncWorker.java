@@ -1,6 +1,7 @@
 package org.openmrs.module.santedb.mpiclient.aop;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,14 +22,14 @@ public class PatientSyncWorker extends Thread {
 	private final MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 	private final UserContext m_userContext;
 	
-	private Patient m_patient;
+	private String m_patientId;
 	
 	/**
 	 * Create a new patient update worker
 	 * @param patient
 	 */
-	public PatientSyncWorker(Patient patient, UserContext ctx ) {
-		this.m_patient = patient;
+	public PatientSyncWorker(String patientId, UserContext ctx ) {
+		this.m_patientId = patientId;
 		this.m_userContext = ctx;
 	}
 	
@@ -43,7 +44,7 @@ public class PatientSyncWorker extends Thread {
 			Context.openSession();
 			Context.setUserContext(this.m_userContext);
 			MpiClientService hieService = Context.getService(MpiClientService.class);
-			
+			Patient patient = Context.getPatientService().getPatientByUuid(this.m_patientId);
 			// Grab the national health ID for the patient
 			if(this.m_configuration.getAutomaticCrossReferenceDomains() != null) {
 				
@@ -57,7 +58,7 @@ public class PatientSyncWorker extends Thread {
 				
 				for(String xrefDomain : autoXrefDomains) {
 					
-					log.info(String.format("Will XREF %s with %s", this.m_patient.getId(), xrefDomain));
+					log.info(String.format("Will XREF %s with %s", this.m_patientId, xrefDomain));
 					
 					PatientIdentifierType pit = null;
 					for(String key : identifierMaps.keySet())
@@ -67,15 +68,15 @@ public class PatientSyncWorker extends Thread {
 							break;
 						}
 					
-					if(pit != null && this.m_patient.getPatientIdentifier(pit) == null) {
-						PatientIdentifier pid = hieService.resolvePatientIdentifier(this.m_patient, xrefDomain);
+					if(pit != null && patient.getPatientIdentifier(pit) == null) {
+						PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, xrefDomain);
 						if(pid != null) {
-							pid.setPatient(this.m_patient);
+							pid.setPatient(patient);
 							Context.getPatientService().savePatientIdentifier(pid);
 						}
 						else 
 						{
-							log.info(String.format("MPI does not have an ID for patient %s in domain %s", this.m_patient.getId(), xrefDomain));
+							log.info(String.format("MPI does not have an ID for patient %s in domain %s", patient.getId(), xrefDomain));
 						}
 					}
 					else if(pit == null)
@@ -85,7 +86,7 @@ public class PatientSyncWorker extends Thread {
 				}
 			}
 		}
-		catch(MpiClientException e)
+		catch(Exception e)
 		{
 			log.error(e);
 		}		

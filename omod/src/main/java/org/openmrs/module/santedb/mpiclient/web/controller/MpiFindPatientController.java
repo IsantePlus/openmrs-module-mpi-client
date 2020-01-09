@@ -72,6 +72,8 @@ public class MpiFindPatientController {
 			{
 				dobDate = new SimpleDateFormat("yyyyMMdd".substring(0, search.getDateOfBirth().length())).parse(search.getDateOfBirth());
 				isFuzzy = search.getDateOfBirth().length() < 8;
+				log.warn(String.format("Using search parameter for date: %s", dobDate.toString()));
+				
 			}
 			if(search.getIdentifier() != null && !search.getIdentifier().isEmpty())
 			{

@@ -19,11 +19,18 @@ package org.openmrs.module.santedb.mpiclient.aop;
 
 
 import java.lang.reflect.Method;
+import java.util.HashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.Patient;
+import org.openmrs.PatientIdentifier;
+import org.openmrs.PatientIdentifierType;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
+import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.springframework.aop.AfterReturningAdvice;
 
 /**
@@ -32,7 +39,10 @@ import org.springframework.aop.AfterReturningAdvice;
 public class PatientSynchronizationAdvice implements AfterReturningAdvice {
 	
 	
-	
+	private final Log log = LogFactory.getLog(this.getClass());
+
+	private final MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
+
 	/**
 	 * Runs everytime a patient a updated
 	 * @see org.springframework.aop.AfterReturningAdvice#afterReturning(java.lang.Object, java.lang.reflect.Method, java.lang.Object[], java.lang.Object)
@@ -47,7 +57,7 @@ public class PatientSynchronizationAdvice implements AfterReturningAdvice {
 		}
 		else if(method.getName().equals("getPatient"))
 		{
-			PatientSyncWorker worker = new PatientSyncWorker((Patient)returnValue, Context.getUserContext());
+			PatientSyncWorker worker = new PatientSyncWorker(((Patient)returnValue).getUuid(), Context.getUserContext());
 			worker.start();
 		}
 		else if(method.getName().equals("saveGlobalProperty"))

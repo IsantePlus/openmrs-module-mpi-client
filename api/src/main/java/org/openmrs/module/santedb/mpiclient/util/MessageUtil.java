@@ -162,8 +162,11 @@ public final class MessageUtil {
         int qpdRep = 0;
         for(Map.Entry<String, String> entry : queryParameters.entrySet())
         {
-	        terser.set(String.format("/QPD-3(%d)-1", qpdRep), entry.getKey());
-	        terser.set(String.format("/QPD-3(%d)-2", qpdRep++), entry.getValue());
+        	String[] value = entry.getValue().split("~");
+        	for(String e : value) {
+		        terser.set(String.format("/QPD-3(%d)-1", qpdRep), entry.getKey());
+		        terser.set(String.format("/QPD-3(%d)-2", qpdRep++), e);
+        	}
         }
         
         terser.set("/QPD-1-1", "Q22");
@@ -304,6 +307,8 @@ public final class MessageUtil {
 						CX cx = pid.getPatientIdentifierList(pid.getPatientIdentifierList().length);
 						this.updateCX(cx, patIdentifier, domain);
 					}
+					else 
+						log.warn(String.format("Ignoring domain %s as it is not configured", patIdentifier.getIdentifierType().getName()));
 					
 				}
 			}
