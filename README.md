@@ -8,6 +8,41 @@ This module allows any version of OpenMRS 1.9.8 or above to communicate with a P
 * IHE PDQ v2 (ITI-21)
 * IHE ATNA (ITI-20)
 
+API Documentation
+-----------------
+
+Javadocs for this API can be found on the [SanteSuite Community Server](http://santesuite.org/assets/doc/java/openmrs-mpi-client/).
+
+#### Maven
+----------
+
+You can reference this API from MAVEN with the following Maven repos:
+
+```
+<repositories>
+  <repository>
+    <id>marc-te</id>
+    <name>MEDIC TECH EXCHANGE</name>
+    <url>http://te.marc-hi.ca/mvn</url>
+  </repository>
+  <repository>
+    <id>santesute-main</id>
+    <url>http://santesuite.org/mvn</url>
+    <name>SanteSuite</name>
+  </repository>
+</repositories>
+```
+
+To reference the API:
+
+```
+<dependency>
+	<groupId>org.openmrs.module</groupId>
+	<artifactId>santedb-mpiclient-api</artifactId>
+	<version>0.9.5</version>
+</dependency>
+```
+
 Configuration of MPI Client
 ---------------------------
 
