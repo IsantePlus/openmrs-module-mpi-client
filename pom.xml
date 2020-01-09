@@ -4,7 +4,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>santedb-mpiclient</artifactId>
-	<version>0.9.9</version>
+	<version>0.9.10</version>
 	<packaging>pom</packaging>
 	<name>OpenMRS MPI Client Module</name>
 	<description>Allows OpenMRS to interact with an IHE PIX MPI.</description>
@@ -138,11 +138,11 @@
   <distributionManagement>
  		<site>
           <id>santesuite-main</id>
-          <url>file://E:/mvn/org/santesuite</url>
+          <url>file://C:/temp/mvn/org/santesuite</url>
       </site>
       <repository>
           <id>santesuite</id>
-          <url>file://E:/mvn/</url>
+          <url>file://C:/temp/mvn</url>
       </repository>
 
   </distributionManagement>

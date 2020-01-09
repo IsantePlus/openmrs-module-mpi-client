@@ -14,7 +14,7 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  */
-package org.openmrs.module.openhie.client.api;
+package org.openmrs.module.santedb.mpiclient.api;
 
 import static org.junit.Assert.*;
 

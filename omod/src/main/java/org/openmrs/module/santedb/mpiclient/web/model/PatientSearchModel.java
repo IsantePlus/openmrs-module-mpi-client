@@ -9,6 +9,13 @@ public class PatientSearchModel {
 
 	private String identifier;
 	private String momsId;
+	private String relativeName;
+	private String birthPlace;
+	
+	public String getRelativeName() { return this.relativeName; }
+	public void setRelativeName(String value) { this.relativeName = value; }
+	public String getBirthPlace() { return this.birthPlace; }
+	public void setBirthPlace(String value) { this.birthPlace = value; }
 	/**
 	 * @return the identifier
 	 */

@@ -84,7 +84,7 @@ public class MpiFindPatientController {
 				
 			}
 			
-			List<MpiPatient> results = service.searchPatient(search.getFamilyName(), search.getGivenName(), dobDate, isFuzzy, search.getGender(), null, search.getAddress(),  identifier, momsIdentifier);
+			List<MpiPatient> results = service.searchPatient(search.getFamilyName(), search.getGivenName(), dobDate, isFuzzy, search.getGender(), null, search.getAddress(),  identifier, momsIdentifier, search.getRelativeName(), search.getBirthPlace());
 			List<PatientResultModel> modelResult = new ArrayList<PatientResultModel>();
 			for(MpiPatient result : results) {
 				modelResult.add(new PatientResultModel(result));

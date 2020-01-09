@@ -38,6 +38,12 @@
 					<td>City or Township</td>
 					<td><input type="text" name="address" value="${patientSearch.address}"/></td>
 				</tr>
+								<tr>             
+					<td>Relative's Name</td>
+					<td><input type="text" name="relativeName" value="${patientSearch.relativeName}"/></td>
+					<td>Birthplace</td>
+					<td><input type="text" name="birthPlace" value="${patientSearch.birthPlace}"/></td>
+				</tr>
 			</table>
 			<br /> <input id="searchSubmit"   type="submit" value="Search"> <br />
 		</form>

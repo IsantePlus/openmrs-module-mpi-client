@@ -136,7 +136,9 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			String stateOrRegion, 
 			String cityOrTownship,
 			PatientIdentifier identifier,
-			PatientIdentifier mothersIdentifier) throws MpiClientException {
+			PatientIdentifier mothersIdentifier, 
+			String nextOfKinName,
+			String birthplace) throws MpiClientException {
 
 		Map<String, String> queryParams = new HashMap<String, String>();
 		if(familyName != null && !familyName.isEmpty())
@@ -161,6 +163,11 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			else
 				queryParams.put("@PID.7", new SimpleDateFormat("yyyyMMdd").format(dateOfBirth));
 		}
+		if(birthplace != null && !birthplace.isEmpty())
+			queryParams.put("@PID.23", birthplace);
+		if(nextOfKinName != null && !nextOfKinName.isEmpty())
+			queryParams.put("@NK1.2.2.1", nextOfKinName);
+		
 		if(gender != null && !gender.isEmpty())
 			queryParams.put("@PID.8", gender);
 		if(identifier != null)
