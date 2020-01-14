@@ -43,6 +43,8 @@ public class MpiClientConfiguration {
 	
 	private final Log log = LogFactory.getLog(this.getClass());
 	
+	public static final String PROP_NAME_MESSAGE_FORMAT = "mpi-client.endpoint.format";
+	
 	public static final String PROP_NAME_PDQ_EP = "mpi-client.endpoint.pdq.addr";
 	public static final String PROP_NAME_PDQ_EP_PORT = "mpi-client.endpoint.pdq.port";
 	public static final String PROP_NAME_PIX_EP = "mpi-client.endpoint.pix.addr";
@@ -146,6 +148,14 @@ public class MpiClientConfiguration {
 	 */
 	public void clearCache() {
 		this.m_cachedProperties.clear();
+	}
+	
+	/**
+	 * Gets the message format
+	 * @return
+	 */
+	public String getMessageFormat() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_MESSAGE_FORMAT, "hl7");
 	}
 	
 	/**
