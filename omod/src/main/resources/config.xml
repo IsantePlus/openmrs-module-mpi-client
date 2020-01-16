@@ -212,6 +212,16 @@
 		<defaultValue>CA</defaultValue>
 		<description>When specified, sets the default country code to use when no country code is present</description>
 	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.security.idp.addr</property>
+		<defaultValue></defaultValue>
+		<description>If you require the use of an OAUTH IdP, the endpoint to send the client_credentials grant to</description>
+	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.endpoint.format</property>
+		<defaultValue>hl7</defaultValue>
+		<description>The messaging format (HL7 or FHIR) to use to interact with the MPI</description>
+	</globalProperty>
 		<!--
 	<dwr>
 		<allow>

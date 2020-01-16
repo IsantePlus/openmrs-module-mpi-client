@@ -6,7 +6,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dcm4che3.audit.AuditMessage;
 import org.dcm4che3.net.audit.AuditLogger;
-import org.openmrs.module.santedb.mpiclient.api.impl.MpiClientServiceImpl;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 
 import ca.uhn.hl7v2.HL7Exception;

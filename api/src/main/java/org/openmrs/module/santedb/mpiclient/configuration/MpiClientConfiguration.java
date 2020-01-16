@@ -56,6 +56,8 @@ public class MpiClientConfiguration {
 	public static final String PROP_NAME_AUTO_PIT = "mpi-client.pid.updateIdTypes";
 
 	public static final String PROP_NAME_MSH_8 = "mpi-client.security.authtoken";
+	public static final String PROP_NAME_IDP_ENDPOINT = "mpi-client.security.idp.addr";
+
 	public static final String PROP_NAME_JKSTRUST_STORE = "mpi-client.security.trustStore";
 	public static final String PROP_NAME_JKSTRUST_PASS = "mpi-client.security.trustStorePassword";
 	public static final String PROP_NAME_JKSKEY_STORE = "mpi-client.security.keyStore";
@@ -172,6 +174,14 @@ public class MpiClientConfiguration {
 	 */
 	public String getPreferredCorrelationDomain() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_PREFER_CORR_AA, "");
+	}
+	
+	/**
+	 * Gets whether background threads are to be used
+	 * @return
+	 */
+	public String getIdentityProviderUrl() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_IDP_ENDPOINT, "");
 	}
 	
 	/**

@@ -16,58 +16,18 @@
  */
 package org.openmrs.module.santedb.mpiclient.api.impl;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.net.UnknownHostException;
-import java.security.GeneralSecurityException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.dcm4che3.audit.AuditMessage;
-import org.dcm4che3.audit.AuditMessages;
-import org.dcm4che3.net.Connection;
-import org.dcm4che3.net.Device;
 import org.dcm4che3.net.audit.AuditLogger;
-import org.dcm4che3.net.audit.AuditRecordRepository;
-import org.marc.everest.datatypes.II;
-import org.marc.everest.formatters.interfaces.IXmlStructureFormatter;
-import org.openmrs.Encounter;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
-import org.openmrs.PersonAddress;
-import org.openmrs.PersonName;
-import org.openmrs.Relationship;
-import org.openmrs.Visit;
-import org.openmrs.PatientIdentifierType.LocationBehavior;
-import org.openmrs.api.APIException;
-import org.openmrs.api.DuplicateIdentifierException;
-import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
-import org.openmrs.module.santedb.mpiclient.util.AuditUtil;
-import org.openmrs.module.santedb.mpiclient.util.MessageDispatchWorker;
-import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
-
-import ca.uhn.hl7v2.HL7Exception;
-import ca.uhn.hl7v2.model.Message;
-import ca.uhn.hl7v2.model.v231.datatype.ED;
-import ca.uhn.hl7v2.model.v231.datatype.ELD;
-import ca.uhn.hl7v2.model.v231.message.ACK;
-import ca.uhn.hl7v2.model.v25.message.QBP_Q21;
-import ca.uhn.hl7v2.parser.PipeParser;
-import ca.uhn.hl7v2.util.Terser;
 
 /**
  * Implementation of the health information exchange service
@@ -77,18 +37,26 @@ import ca.uhn.hl7v2.util.Terser;
 public class MpiClientServiceImpl extends BaseOpenmrsService
 		implements MpiClientService {
 
+	private FhirMpiClientServiceImpl m_fhirService;
+	private HL7MpiClientServiceImpl m_hl7Service;
 
-	// The wrapped service
-	private MpiClientService m_wrappedService;
-	
+	// DAO
+		private MpiClientDao dao;
+		
+	/**
+	 * @param dao the dao to set
+	 */
+	public void setDao(MpiClientDao dao) {
+		this.dao = dao;
+		this.m_hl7Service.setDao(dao);
+	}
+
 	/**
 	 * @summary Creates a new instance of the MPI Client Service Implementation
 	 */
 	public MpiClientServiceImpl() {
-		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
-			this.m_wrappedService = new FhirMpiClientServiceImpl(); // TODO: FHIR implementation
-		else 
-			this.m_wrappedService = new HL7MpiClientServiceImpl();
+		this.m_fhirService = new FhirMpiClientServiceImpl(); // TODO: FHIR implementation
+		this.m_hl7Service = new HL7MpiClientServiceImpl();
 	}
 
 	/**
@@ -98,8 +66,11 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
 			String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,
 			PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException {
-		// TODO Auto-generated method stub
-		return this.m_wrappedService.searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship, patientIdentifier, mothersIdentifier, nextOfKinName, birthPlace);
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			return this.m_fhirService.searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship, patientIdentifier, mothersIdentifier, nextOfKinName, birthPlace);
+		else 
+			return this.m_hl7Service.searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship, patientIdentifier, mothersIdentifier, nextOfKinName, birthPlace);
+			
 	}
 
 	/**
@@ -108,7 +79,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	@Override
 	public MpiPatient getPatient(String identifier, String assigningAuthority) throws MpiClientException {
 		// TODO Auto-generated method stub
-		return this.m_wrappedService.getPatient(identifier, assigningAuthority);
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			return this.m_fhirService.getPatient(identifier, assigningAuthority);
+		else 
+			return this.m_hl7Service.getPatient(identifier, assigningAuthority);
 	}
 
 	/**
@@ -118,7 +92,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	public PatientIdentifier resolvePatientIdentifier(Patient patient, String toAssigningAuthority)
 			throws MpiClientException {
 		// TODO Auto-generated method stub
-		return this.m_wrappedService.resolvePatientIdentifier(patient, toAssigningAuthority);
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			return this.m_fhirService.resolvePatientIdentifier(patient, toAssigningAuthority);
+		else 
+			return this.m_hl7Service.resolvePatientIdentifier(patient, toAssigningAuthority);
 	}
 
 	/**
@@ -127,8 +104,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	@Override
 	public void synchronizePatientEnterpriseId(Patient patient) throws MpiClientException {
 		// TODO Auto-generated method stub
-		this.m_wrappedService.synchronizePatientEnterpriseId(patient);
-		
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			this.m_fhirService.synchronizePatientEnterpriseId(patient);
+		else 
+			this.m_hl7Service.synchronizePatientEnterpriseId(patient);
 	}
 
 	/**
@@ -137,7 +116,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	@Override
 	public Patient importPatient(MpiPatient patient) throws MpiClientException {
 		// TODO Auto-generated method stub
-		return this.importPatient(patient);
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			return this.m_fhirService.importPatient(patient);
+		else 
+			return this.m_hl7Service.importPatient(patient);
 	}
 
 	/**
@@ -146,7 +128,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	@Override
 	public Patient matchWithExistingPatient(Patient remotePatient) {
 		// TODO Auto-generated method stub
-		return this.matchWithExistingPatient(remotePatient);
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			return this.m_fhirService.matchWithExistingPatient(remotePatient);
+		else 
+			return this.m_hl7Service.matchWithExistingPatient(remotePatient);
 	}
 
 	/**
@@ -155,7 +140,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	@Override
 	public void exportPatient(Patient patient) throws MpiClientException {
 		// TODO Auto-generated method stub
-		this.m_wrappedService.exportPatient(patient);
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			this.m_fhirService.exportPatient(patient);
+		else 
+			this.m_hl7Service.exportPatient(patient);
 	}
 
 	/**
@@ -164,7 +152,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	@Override
 	public void updatePatient(Patient patient) throws MpiClientException {
 		// TODO Auto-generated method stub
-		this.m_wrappedService.updatePatient(patient);
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			this.m_fhirService.updatePatient(patient);
+		else 
+			this.m_hl7Service.updatePatient(patient);
 	}
 
 	/**
@@ -173,7 +164,10 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	@Override
 	public AuditLogger getAuditLogger() {
 		// TODO Auto-generated method stub
-		return this.m_wrappedService.getAuditLogger();
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			return this.m_fhirService.getAuditLogger();
+		else 
+			return this.m_hl7Service.getAuditLogger();
 	}
 	
 }

@@ -1,10 +1,11 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>santedb-mpiclient</artifactId>
-	<version>0.9.10</version>
+	<version>0.9.11</version>
 	<packaging>pom</packaging>
 	<name>OpenMRS MPI Client Module</name>
 	<description>Allows OpenMRS to interact with an IHE PIX MPI.</description>
@@ -18,19 +19,11 @@
 
 	<dependencyManagement>
 		<dependencies>
-			<!--
-			Libraries from lib to add as dependencies with compile or runtime scope:
-			
-				
-			Find matching dependencies in maven central repository.
-			<dependency>
-				<groupId>org.other.library</groupId>
-				<artifactId>library-name</artifactId>
-				<version>library.version</version>
-				<scope>compile</scope>
-			</dependency>
-			-->
-			
+			<!-- Libraries from lib to add as dependencies with compile or runtime 
+				scope: Find matching dependencies in maven central repository. <dependency> 
+				<groupId>org.other.library</groupId> <artifactId>library-name</artifactId> 
+				<version>library.version</version> <scope>compile</scope> </dependency> -->
+
 			<dependency>
 				<groupId>org.openmrs.api</groupId>
 				<artifactId>openmrs-api</artifactId>
@@ -66,6 +59,67 @@
 				<type>pom</type>
 				<scope>test</scope>
 			</dependency>
+			<dependency>
+				<groupId>ca.uhn.hapi.fhir</groupId>
+				<artifactId>hapi-fhir-base</artifactId>
+				<version>4.0.3</version>
+				<exclusions>
+					<exclusion>
+						<groupId>org.slf4j</groupId>
+						<artifactId>slf4j-api</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.slf4j</groupId>
+						<artifactId>jcl-over-slf4j</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>commons-io</groupId>
+						<artifactId>commons-io</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.eclipse.jetty</groupId>
+						<artifactId>jetty-server</artifactId>
+					</exclusion>
+					<exclusion>
+						<artifactId>stax-api</artifactId>
+						<groupId>javax.xml.stream</groupId>
+					</exclusion>
+					<exclusion>
+						<artifactId>xpp3</artifactId>
+						<groupId>xpp3</groupId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>ca.uhn.hapi.fhir</groupId>
+				<artifactId>hapi-fhir-structures-r4</artifactId>
+				<version>4.0.3</version>
+				<exclusions>
+					<exclusion>
+						<artifactId>stax-api</artifactId>
+						<groupId>javax.xml.stream</groupId>
+					</exclusion>
+					<exclusion>
+						<artifactId>xpp3</artifactId>
+						<groupId>xpp3</groupId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>ca.uhn.hapi.fhir</groupId>
+				<artifactId>hapi-fhir-client</artifactId>
+				<version>4.0.3</version>
+			</dependency>
+			<dependency>
+				<groupId>javax.inject</groupId>
+				<artifactId>javax.inject</artifactId>
+				<version>1</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-lang3</artifactId>
+				<version>3.9</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -95,17 +149,17 @@
 
 	<repositories>
 		<repository>
-            <id>dcm4che-repository</id>
-            <name>DCM4CHE Public Maven Repository</name>
-            <url>http://www.dcm4che.org/maven2</url>
-            <layout>default</layout>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
+			<id>dcm4che-repository</id>
+			<name>DCM4CHE Public Maven Repository</name>
+			<url>http://www.dcm4che.org/maven2</url>
+			<layout>default</layout>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
 		<repository>
 			<id>openmrs-repo</id>
 			<name>OpenMRS Nexus Repository</name>
@@ -117,10 +171,10 @@
 			<url>http://te.marc-hi.ca/mvn</url>
 		</repository>
 		<repository>
-  		<id>santesute-main</id>
-  		<url>http://santesuite.org/mvn</url>
-  		<name>SanteSuite</name>
-  	</repository>
+			<id>santesute-main</id>
+			<url>http://santesuite.org/mvn</url>
+			<name>SanteSuite</name>
+		</repository>
 	</repositories>
 
 	<pluginRepositories>
@@ -135,15 +189,15 @@
 	</pluginRepositories>
 
 
-  <distributionManagement>
- 		<site>
-          <id>santesuite-main</id>
-          <url>file://C:/temp/mvn/org/santesuite</url>
-      </site>
-      <repository>
-          <id>santesuite</id>
-          <url>file://C:/temp/mvn</url>
-      </repository>
+	<distributionManagement>
+		<site>
+			<id>santesuite-main</id>
+			<url>file://C:/temp/mvn/org/santesuite</url>
+		</site>
+		<repository>
+			<id>santesuite</id>
+			<url>file://C:/temp/mvn</url>
+		</repository>
 
-  </distributionManagement>
+	</distributionManagement>
 </project>

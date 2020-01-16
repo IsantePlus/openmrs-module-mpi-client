@@ -16,14 +16,13 @@
  */
 package org.openmrs.module.santedb.mpiclient.api;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-
 
 import org.junit.Assert;
 import org.junit.Before;

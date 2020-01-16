@@ -16,13 +16,8 @@
  */
 package org.openmrs.module.santedb.mpiclient.api.impl;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.net.UnknownHostException;
-import java.security.GeneralSecurityException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
@@ -32,26 +27,18 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.dcm4che3.audit.AuditMessage;
-import org.dcm4che3.audit.AuditMessages;
-import org.dcm4che3.net.Connection;
-import org.dcm4che3.net.Device;
 import org.dcm4che3.net.audit.AuditLogger;
-import org.dcm4che3.net.audit.AuditRecordRepository;
 import org.marc.everest.datatypes.II;
-import org.marc.everest.formatters.interfaces.IXmlStructureFormatter;
-import org.openmrs.Encounter;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
+import org.openmrs.PatientIdentifierType.LocationBehavior;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonName;
 import org.openmrs.Relationship;
-import org.openmrs.Visit;
-import org.openmrs.PatientIdentifierType.LocationBehavior;
 import org.openmrs.api.APIException;
 import org.openmrs.api.DuplicateIdentifierException;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.impl.BaseOpenmrsService;
-import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
+import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
@@ -62,7 +49,6 @@ import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.Message;
-import ca.uhn.hl7v2.model.v231.datatype.ED;
 import ca.uhn.hl7v2.model.v231.datatype.ELD;
 import ca.uhn.hl7v2.model.v231.message.ACK;
 import ca.uhn.hl7v2.model.v25.message.QBP_Q21;
@@ -74,8 +60,8 @@ import ca.uhn.hl7v2.util.Terser;
  * @author Justin
  *
  */
-public class HL7MpiClientServiceImpl extends BaseOpenmrsService
-		implements MpiClientService {
+public class HL7MpiClientServiceImpl 
+		implements MpiClientWorker {
 
 	// Lock object
 	
@@ -480,6 +466,7 @@ public class HL7MpiClientServiceImpl extends BaseOpenmrsService
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 			log.error(e);
 			if(auditMessage != null)
 				auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, false);
