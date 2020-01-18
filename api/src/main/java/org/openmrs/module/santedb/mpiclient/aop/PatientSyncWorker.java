@@ -82,7 +82,11 @@ public class PatientSyncWorker extends Thread {
 					
 					if(pit != null && patient.getPatientIdentifier(pit) == null) {
 						PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, xrefDomain);
-						if(pid != null) {
+						
+						// Already exists 
+						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pit).size() != 0)
+							log.warn(String.format("Identifier %s already exists", pid.getIdentifier()));
+						else if(pid != null) {
 							pid.setPatient(patient);
 							Context.getPatientService().savePatientIdentifier(pid);
 						}

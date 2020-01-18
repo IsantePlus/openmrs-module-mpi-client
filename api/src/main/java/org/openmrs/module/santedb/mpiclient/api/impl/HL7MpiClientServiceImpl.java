@@ -38,6 +38,7 @@ import org.openmrs.Relationship;
 import org.openmrs.api.APIException;
 import org.openmrs.api.DuplicateIdentifierException;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
@@ -85,33 +86,6 @@ public class HL7MpiClientServiceImpl
 		this.dao = dao;
 	}
 
-	/**
-	 * Update patient ECID 
-	 * @throws MpiClientException 
-	 */
-	public void synchronizePatientEnterpriseId(Patient patient) throws MpiClientException
-	{
-		// Resolve patient identifier
-		PatientIdentifier pid = this.resolvePatientIdentifier(patient, this.m_configuration.getEnterprisePatientIdRoot());
-		if(pid != null)
-		{
-			PatientIdentifier existingPid = patient.getPatientIdentifier(pid.getIdentifierType());
-			if(existingPid != null && !existingPid.getIdentifier().equals(pid.getIdentifier()))
-			{
-					existingPid.setIdentifier(pid.getIdentifier());
-					Context.getPatientService().savePatientIdentifier(existingPid);	
-			}
-			else if(existingPid == null)
-			{
-				pid.setPatient(patient);
-				Context.getPatientService().savePatientIdentifier(pid);
-			}
-			else
-				return;
-		}
-		else
-			throw new MpiClientException("Patient has been removed from the HIE");
-	}
 	
 	/**
 	 * Search the PDQ supplier for the specified patient data
@@ -332,7 +306,7 @@ public class HL7MpiClientServiceImpl
 	 */
 	public Patient importPatient(MpiPatient patient) throws MpiClientException 
 	{
-		Patient patientRecord = this.matchWithExistingPatient(patient);
+		Patient patientRecord = Context.getService(MpiClientService.class).matchWithExistingPatient(patient);
 		
 		// Existing? Then update this from that
 		if(patientRecord != null)
@@ -533,38 +507,7 @@ public class HL7MpiClientServiceImpl
 		}
 	}
 
-	/**
-	 * Match an external patient with internal patient
-	 * @see org.openmrs.module.santedb.mpiclient.api.MpiClientService#matchWithExistingPatient(org.openmrs.Patient)
-	 */
-	public Patient matchWithExistingPatient(Patient remotePatient) {
-		Patient candidate = null;
-		// Does this patient have an identifier from our assigning authority?
-		for(PatientIdentifier pid : remotePatient.getIdentifiers()) {
-			if(pid.getIdentifierType() == null) continue;
-			String domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName());
-			if(this.m_configuration.getLocalPatientIdRoot().equals(domain))
-				try
-				{
-					candidate = Context.getPatientService().getPatient(Integer.parseInt(pid.getIdentifier()));
-				}
-				catch(Exception e)
-				{
-					
-				}
-		}
-		// This patient may be an existing patient, so we just don't want to add it!
-		if(candidate == null)
-			for(PatientIdentifier pid : remotePatient.getIdentifiers())
-			{
-				candidate = this.dao.getPatientByIdentifier(pid.getIdentifier(), pid.getIdentifierType());
-				if(candidate != null)
-					break;
-			}
-		
-		return candidate;
-    }
-
+	
 	/**
 	 * Update the patient record
 	 * @see org.openmrs.module.santedb.mpiclient.api.MpiClientService#updatePatient(org.openmrs.Patient)

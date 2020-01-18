@@ -22,6 +22,7 @@ import java.util.List;
 import org.dcm4che3.net.audit.AuditLogger;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
+import org.openmrs.api.context.Context;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
@@ -39,6 +40,8 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 
 	private FhirMpiClientServiceImpl m_fhirService;
 	private HL7MpiClientServiceImpl m_hl7Service;
+	// Get health information exchange information
+	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
 	// DAO
 		private MpiClientDao dao;
@@ -103,11 +106,26 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	 */
 	@Override
 	public void synchronizePatientEnterpriseId(Patient patient) throws MpiClientException {
-		// TODO Auto-generated method stub
-		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
-			this.m_fhirService.synchronizePatientEnterpriseId(patient);
-		else 
-			this.m_hl7Service.synchronizePatientEnterpriseId(patient);
+		// Resolve patient identifier
+		PatientIdentifier pid = this.resolvePatientIdentifier(patient, MpiClientConfiguration.getInstance().getEnterprisePatientIdRoot());
+		if(pid != null)
+		{
+			PatientIdentifier existingPid = patient.getPatientIdentifier(pid.getIdentifierType());
+			if(existingPid != null && !existingPid.getIdentifier().equals(pid.getIdentifier()))
+			{
+					existingPid.setIdentifier(pid.getIdentifier());
+					Context.getPatientService().savePatientIdentifier(existingPid);	
+			}
+			else if(existingPid == null)
+			{
+				pid.setPatient(patient);
+				Context.getPatientService().savePatientIdentifier(pid);
+			}
+			else
+				return;
+		}
+		else
+			throw new MpiClientException("Patient has been removed from the HIE");
 	}
 
 	/**
@@ -123,17 +141,39 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	}
 
 	/**
-	 * Match with an existing patient in OpenMRS
+	 * Match an external patient with internal patient
+	 * @see org.openmrs.module.santedb.mpiclient.api.MpiClientService#matchWithExistingPatient(org.openmrs.Patient)
 	 */
 	@Override
 	public Patient matchWithExistingPatient(Patient remotePatient) {
-		// TODO Auto-generated method stub
-		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
-			return this.m_fhirService.matchWithExistingPatient(remotePatient);
-		else 
-			return this.m_hl7Service.matchWithExistingPatient(remotePatient);
-	}
+		Patient candidate = null;
+		// Does this patient have an identifier from our assigning authority?
+		for(PatientIdentifier pid : remotePatient.getIdentifiers()) {
+			if(pid.getIdentifierType() == null) continue;
+			String domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName());
+			if(this.m_configuration.getLocalPatientIdRoot().equals(domain))
+				try
+				{
+					candidate = Context.getPatientService().getPatient(Integer.parseInt(pid.getIdentifier()));
+				}
+				catch(Exception e)
+				{
+					
+				}
+		}
+		// This patient may be an existing patient, so we just don't want to add it!
+		if(candidate == null)
+			for(PatientIdentifier pid : remotePatient.getIdentifiers())
+			{
+				candidate = this.dao.getPatientByIdentifier(pid.getIdentifier(), pid.getIdentifierType());
+				if(candidate != null)
+					break;
+			}
+		
+		return candidate;
+    }
 
+	
 	/**
 	 * Export patient using preferred messaging format
 	 */

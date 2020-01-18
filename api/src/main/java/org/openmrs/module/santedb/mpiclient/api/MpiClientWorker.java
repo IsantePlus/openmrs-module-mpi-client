@@ -50,12 +50,6 @@ public interface MpiClientWorker  {
 	public PatientIdentifier resolvePatientIdentifier(Patient patient, String toAssigningAuthority) throws MpiClientException;
 	
 	/**
-	 * Forces an update of the patient's ECID data
-	 * @param patient
-	 */
-	public void synchronizePatientEnterpriseId(Patient patient) throws MpiClientException;
-	
-	/**
 	 * Import the specified patient data from the PDQ supplier
 	 * @param identifier
 	 * @param asigningAuthority
@@ -63,11 +57,6 @@ public interface MpiClientWorker  {
 	 * @throws MpiClientException 
 	 */
 	public Patient importPatient(MpiPatient patient) throws MpiClientException;
-	
-	/**
-	 * Matches an external patient with an internal 
-	 */
-	public Patient matchWithExistingPatient(Patient remotePatient);
 	
 	/**
 	 * Export patient demographic record to the CR
