@@ -32,7 +32,7 @@ You can now upload the module to OpenMRS
 
 If successful, you should see the **MPI Search** option appear in the main header, as well as an indicator the install was successful.
 
-![Successful installation](./doc/modules-post-install.png)
+![Successful installation](./doc/modules-post-install.PNG)
 
 ## Configure the Module
 
@@ -40,7 +40,7 @@ Next you'll need to configure the OMOD for your environment. The OMOD can operat
 
 Either configuration is done by visiting **Administration** > **Settings** and selecting the **MPI - Client** section.
 
-![MPI Client Module Settings](./doc/settings.png)
+![MPI Client Module Settings](./doc/settings.PNG)
 
 Before setup you'll need to answer the following questions:
 
@@ -67,7 +67,7 @@ In both configurations below, the **example** column is describing an environmen
 To configure for HL7v2, use the following reference table of settings. The sample environment being configured here has an MPI at mpi-server on port 2100 and an audit repository at audit-repo on port 514
 
 | Setting | Description | Example Configuration |
-|-|-|-|-|
+| ------- | ----------- | --------------------- |
 | Background Threads | Not used | false |
 | Endpoint Ar Addr | The Audit Repository (IHE ATNA) endpoint | ar-server |
 | Endpoint Ar Bind | The address on which to bind UDP traffic | |
@@ -100,7 +100,7 @@ To configure for HL7v2, use the following reference table of settings. The sampl
 To configure for FHIR, the settings all have the same meaning, they are simply updated to match a FHIR environment.
 
 | Setting | Description | Example Configuration |
-|-|-|-|-|
+|-|-|-|
 | Background Threads | Not used | false |
 | Endpoint Ar Addr | The Audit Repository (IHE ATNA) endpoint | ~~ar-server~~ |
 | Endpoint Ar Bind | The address on which to bind UDP traffic | ~~514~~ |
