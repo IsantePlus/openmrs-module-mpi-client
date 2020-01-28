@@ -1,7 +1,7 @@
 package org.openmrs.module.santedb.mpiclient.aop;
 
 import java.util.HashMap;
-import java.util.UUID;
+import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -12,11 +12,12 @@ import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UserContext;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
-import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 
 public class PatientSyncWorker extends Thread {
 
 
+	private final static HashSet<String> s_xref = new HashSet<String>();
+	
 	private final Log log = LogFactory.getLog(this.getClass());
 
 	private final MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
@@ -41,6 +42,17 @@ public class PatientSyncWorker extends Thread {
 		log.info("Sending update to the MPI for new patient data...");
 		try
 		{
+			// Make sure we only XREF once
+			synchronized (s_xref) {
+				if(s_xref.contains(this.m_patientId))
+				{
+					log.warn(String.format("Patient %s is already being cross referenced", this.m_patientId));
+					return;
+				}
+				else 
+						s_xref.add(this.m_patientId);
+			}
+			
 			Context.openSession();
 			Context.setUserContext(this.m_userContext);
 			MpiClientService hieService = Context.getService(MpiClientService.class);
@@ -70,7 +82,11 @@ public class PatientSyncWorker extends Thread {
 					
 					if(pit != null && patient.getPatientIdentifier(pit) == null) {
 						PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, xrefDomain);
-						if(pid != null) {
+						
+						// Already exists 
+						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pit).size() != 0)
+							log.warn(String.format("Identifier %s already exists", pid.getIdentifier()));
+						else if(pid != null) {
 							pid.setPatient(patient);
 							Context.getPatientService().savePatientIdentifier(pid);
 						}
@@ -91,6 +107,10 @@ public class PatientSyncWorker extends Thread {
 			log.error(e);
 		}		
 		finally {
+			synchronized (s_xref) {
+				s_xref.remove(this.m_patientId);
+			}
+			
 			Context.closeSession();
 		}
 	}

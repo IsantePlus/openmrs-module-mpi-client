@@ -21,17 +21,14 @@ import java.util.List;
 import org.dcm4che3.net.audit.AuditLogger;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
-import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Implementation of the HealthInformationExchangeService
  * @author Justin
  */
-@Transactional(rollbackFor=MpiClientException.class)
-public interface MpiClientService extends OpenmrsService {
+public interface MpiClientWorker  {
 
 	/**
 	 * Searches the PDQ supplier for patients matching the specified search string and returns
@@ -53,12 +50,6 @@ public interface MpiClientService extends OpenmrsService {
 	public PatientIdentifier resolvePatientIdentifier(Patient patient, String toAssigningAuthority) throws MpiClientException;
 	
 	/**
-	 * Forces an update of the patient's ECID data
-	 * @param patient
-	 */
-	public void synchronizePatientEnterpriseId(Patient patient) throws MpiClientException;
-	
-	/**
 	 * Import the specified patient data from the PDQ supplier
 	 * @param identifier
 	 * @param asigningAuthority
@@ -66,11 +57,6 @@ public interface MpiClientService extends OpenmrsService {
 	 * @throws MpiClientException 
 	 */
 	public Patient importPatient(MpiPatient patient) throws MpiClientException;
-	
-	/**
-	 * Matches an external patient with an internal 
-	 */
-	public Patient matchWithExistingPatient(Patient remotePatient);
 	
 	/**
 	 * Export patient demographic record to the CR
