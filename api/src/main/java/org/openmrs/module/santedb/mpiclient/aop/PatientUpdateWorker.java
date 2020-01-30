@@ -1,9 +1,12 @@
 package org.openmrs.module.santedb.mpiclient.aop;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.marc.everest.datatypes.generic.LIST;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
@@ -73,10 +76,13 @@ public class PatientUpdateWorker extends Thread {
 							break;
 						}
 
+					List<PatientIdentifierType> pitList = new ArrayList<PatientIdentifierType>();
+					pitList.add(pit);
+					
 					if (pit != null && this.m_patient.getPatientIdentifier(pit) == null) {
 						PatientIdentifier pid = hieService.resolvePatientIdentifier(this.m_patient, xrefDomain);
 						// Already exists 
-						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pit).size() != 0)
+						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pitList, null, null, null).size() != 0)
 							log.warn(String.format("Identifier %s already exists", pid.getIdentifier()));
 						else if (pid != null) {
 							pid.setPatient(this.m_patient);

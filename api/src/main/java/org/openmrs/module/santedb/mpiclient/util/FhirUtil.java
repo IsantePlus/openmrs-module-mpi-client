@@ -36,14 +36,7 @@ import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.DataTypeException;
-import ca.uhn.hl7v2.model.Segment;
-import ca.uhn.hl7v2.model.Structure;
-import ca.uhn.hl7v2.model.v25.datatype.CX;
-import ca.uhn.hl7v2.model.v25.datatype.XAD;
-import ca.uhn.hl7v2.model.v25.datatype.XPN;
-import ca.uhn.hl7v2.model.v25.segment.NK1;
-import ca.uhn.hl7v2.util.Terser;
-import net.sf.saxon.regex.RegexSyntaxException;
+
 
 public class FhirUtil {
 	
@@ -176,7 +169,7 @@ public class FhirUtil {
 	 * @param pn   The person name to convert
 	 * @throws RegexSyntaxException
 	 */
-	private void updateFhirName(HumanName name, PersonName pn) throws RegexSyntaxException {
+	private void updateFhirName(HumanName name, PersonName pn)  {
 
 		String nameRewrite = this.m_configuration.getNameRewriteRule();
 
@@ -266,7 +259,7 @@ public class FhirUtil {
 	 * @throws RegexSyntaxException
 	 */
 	public org.hl7.fhir.r4.model.Patient createFhirPatient(Patient patient, boolean localIdOnly)
-			throws HL7Exception, RegexSyntaxException {
+			throws HL7Exception {
 
 		// Update the PID information
 		HashMap<String, String> exportIdentifiers = this.m_configuration.getLocalPatientIdentifierTypeMap();

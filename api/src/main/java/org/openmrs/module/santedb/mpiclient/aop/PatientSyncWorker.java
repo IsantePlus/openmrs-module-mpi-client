@@ -1,7 +1,9 @@
 package org.openmrs.module.santedb.mpiclient.aop;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,9 +84,11 @@ public class PatientSyncWorker extends Thread {
 					
 					if(pit != null && patient.getPatientIdentifier(pit) == null) {
 						PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, xrefDomain);
-						
+						List<PatientIdentifierType> pitList = new ArrayList<PatientIdentifierType>();
+						pitList.add(pit);
+
 						// Already exists 
-						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pit).size() != 0)
+						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pitList, null, null, null).size() != 0)
 							log.warn(String.format("Identifier %s already exists", pid.getIdentifier()));
 						else if(pid != null) {
 							pid.setPatient(patient);
