@@ -48,7 +48,6 @@ import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.parser.EncodingNotSupportedException;
 import ca.uhn.hl7v2.parser.PipeParser;
-import net.sf.saxon.regex.RegexSyntaxException;
 
 /**
  * Message utility test
@@ -152,7 +151,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	 * @throws RegexSyntaxException 
 	 */
 	@Test
-	public void testCreateAdmit() throws HL7Exception, RegexSyntaxException {
+	public void testCreateAdmit() throws HL7Exception,MpiClientException {
 		Patient testPatient = new Patient();
 		testPatient.setGender("F");
 		testPatient.setBirthdate(new Date());
@@ -177,7 +176,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	 * @throws RegexSyntaxException 
 	 */
 	@Test
-	public void testCreateNextOfKin() throws HL7Exception, RegexSyntaxException {
+	public void testCreateNextOfKin() throws HL7Exception,MpiClientException {
 		Patient testPatient = new Patient();
 		testPatient.setGender("F");
 		testPatient.setBirthdate(new Date());
@@ -217,7 +216,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	 * @throws RegexSyntaxException 
 	 */
 	@Test
-	public void testCreateExtension() throws HL7Exception, RegexSyntaxException {
+	public void testCreateExtension() throws HL7Exception,MpiClientException {
 		Patient testPatient = new Patient();
 		testPatient.setGender("F");
 		testPatient.setBirthdate(new Date());
@@ -248,7 +247,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	 * @throws RegexSyntaxException 
 	 */
 	@Test
-	public void testCreateTwoExtension() throws HL7Exception, RegexSyntaxException {
+	public void testCreateTwoExtension() throws HL7Exception,MpiClientException {
 		
 
 		Patient testPatient = new Patient();
@@ -287,7 +286,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	 * @throws RegexSyntaxException 
 	 */
 	@Test
-	public void testCreateNameRewrite() throws HL7Exception, RegexSyntaxException {
+	public void testCreateNameRewrite() throws HL7Exception,MpiClientException {
 		
 
 		Patient testPatient = new Patient();
@@ -341,7 +340,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	 * @throws RegexSyntaxException 
 	 */
 	@Test
-	public void testDoesNotIncludeLocalIdentifier() throws HL7Exception, RegexSyntaxException {
+	public void testDoesNotIncludeLocalIdentifier() throws HL7Exception,MpiClientException {
 		
 
 		Patient testPatient = new Patient();
@@ -382,7 +381,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	 * Tests that the system can resolve multiple domain identities
 	 */
 	@Test
-	public void testCanResolveMultiDomains() throws HL7Exception, RegexSyntaxException {
+	public void testCanResolveMultiDomains() throws HL7Exception,MpiClientException {
 		
 		try {
 			Context.getAdministrationService().saveGlobalProperty(new GlobalProperty(MpiClientConfiguration.PROP_NAME_PREFER_CORR_AA, "1.2.3.4.5"));
@@ -426,7 +425,7 @@ public class MessageUtilTest extends BaseModuleContextSensitiveTest {
 	 * Tests that the correlation routine works properly
 	 */
 	@Test
-	public void testCanResolveLocalPatientIdentifier() throws HL7Exception, RegexSyntaxException {
+	public void testCanResolveLocalPatientIdentifier() throws HL7Exception,MpiClientException {
 		
 		// Message containing TEST domain
 		String aMessageWithPID = "MSH|^~\\&|CR1^^|MOH_CAAT^^|TEST_HARNESS^^|TEST^^|20141104174451||RSP^K23^RSP_K21|TEST-CR-05-10|P|2.5\r" + 

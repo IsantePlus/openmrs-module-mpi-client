@@ -82,7 +82,6 @@ import ca.uhn.hl7v2.model.v25.segment.PID;
 import ca.uhn.hl7v2.model.v25.segment.SFT;
 import ca.uhn.hl7v2.parser.PipeParser;
 import ca.uhn.hl7v2.util.Terser;
-import net.sf.saxon.regex.RegexSyntaxException;
 
 /**
  * Message utilities used by the API
@@ -188,9 +187,10 @@ public final class MessageUtil {
 	 * @param patient
 	 * @return
 	 * @throws HL7Exception
+	 * @throws MpiClientException 
 	 * @throws RegexSyntaxException
 	 */
-	public Message createAdmit(Patient patient) throws HL7Exception, RegexSyntaxException {
+	public Message createAdmit(Patient patient) throws HL7Exception, MpiClientException {
 
 		ADT_A01 message = new ADT_A01();
 		this.updateMSH(message.getMSH(), "ADT", "A04");
@@ -268,9 +268,10 @@ public final class MessageUtil {
 	 * Update the PID segment
 	 * 
 	 * @throws HL7Exception
+	 * @throws MpiClientException 
 	 * @throws RegexSyntaxException
 	 */
-	private void updatePID(PID pid, Patient patient, boolean localIdOnly) throws HL7Exception, RegexSyntaxException {
+	private void updatePID(PID pid, Patient patient, boolean localIdOnly) throws HL7Exception, MpiClientException {
 
 		// Update the pid segment with data in the patient
 		HashMap<String, String> exportIdentifiers = this.m_configuration.getLocalPatientIdentifierTypeMap();
@@ -351,7 +352,7 @@ public final class MessageUtil {
 		}
 
 		// Mother?
-		for (Relationship rel : Context.getPersonService().getRelationships(patient)) {
+		for (Relationship rel : Context.getPersonService().getRelationships(patient, null, null)) {
 			if (rel.getRelationshipType().getDescription().contains("MTH") && patient.equals(rel.getPersonB())) // MOTHER?
 			{
 				// TODO: Find a better ID
@@ -389,10 +390,11 @@ public final class MessageUtil {
 	 * Update the NK1 segment
 	 * 
 	 * @throws HL7Exception
+	 * @throws MpiClientException 
 	 * @throws RegexSyntaxException
 	 */
 	private void updateNK1(NK1 nk1, Relationship relationship, boolean localIdOnly)
-			throws HL7Exception, RegexSyntaxException {
+			throws HL7Exception, MpiClientException {
 
 		// Update the pid segment with data in the patient
 		Person person = relationship.getPersonA();
@@ -467,8 +469,9 @@ public final class MessageUtil {
 	 * @param pn
 	 * @throws RegexSyntaxException
 	 * @throws HL7Exception
+	 * @throws MpiClientException 
 	 */
-	private void updateXPN(XPN xpn, PersonName pn) throws RegexSyntaxException, HL7Exception {
+	private void updateXPN(XPN xpn, PersonName pn) throws HL7Exception, MpiClientException {
 
 		String nameRewrite = this.m_configuration.getNameRewriteRule();
 
@@ -507,11 +510,11 @@ public final class MessageUtil {
 	 * @throws RegexSyntaxException
 	 * @throws HL7Exception
 	 */
-	public void rewriteName(XPN xpn, String nameRewrite, String nameString) throws RegexSyntaxException, HL7Exception {
+	public void rewriteName(XPN xpn, String nameRewrite, String nameString) throws MpiClientException, HL7Exception {
 
 		String[] rules = nameRewrite.split("/");
 		if (rules.length != 4 || !rules[0].isEmpty())
-			throw new RegexSyntaxException(String.format("%s is not valid regex", nameRewrite));
+			throw new MpiClientException(String.format("%s is not valid regex", nameRewrite));
 
 		if (rules[3].contains("i"))
 			rules[1] = String.format("(?i)%s", rules[1]);
@@ -657,11 +660,10 @@ public final class MessageUtil {
 						PatientIdentifier patientIdentifier = this.interpretCx(id);
 						List<PatientIdentifierType> identifierTypes = new ArrayList<PatientIdentifierType>();
 						identifierTypes.add(patientIdentifier.getIdentifierType());
-						List<Patient> matchPatient = Context.getPatientService().getPatients(null,
-								patientIdentifier.getIdentifier(), identifierTypes, false);
-
-						if (matchPatient != null && matchPatient.size() > 0)
-							patient.setId(matchPatient.get(0).getId());
+						// HACK: The old method of fetching patient by ID seems to no longer work in OMRS2 - So we'll use this method instead
+						List<PatientIdentifier> matchPatientIds = Context.getPatientService().getPatientIdentifiers(patientIdentifier.getIdentifier(), identifierTypes, null, null, null);
+						if (matchPatientIds != null && matchPatientIds.size() > 0)
+							patient.setId(matchPatientIds.get(0).getPatient().getId());
 						patient.addIdentifier(patientIdentifier);
 					} else {
 						PatientIdentifier patId = this.interpretCx(id);
@@ -1018,9 +1020,10 @@ public final class MessageUtil {
 	 * Create the update message
 	 * 
 	 * @throws HL7Exception
+	 * @throws MpiClientException 
 	 * @throws RegexSyntaxException
 	 */
-	public Message createUpdate(Patient patient) throws HL7Exception, RegexSyntaxException {
+	public Message createUpdate(Patient patient) throws HL7Exception, MpiClientException {
 		ADT_A01 message = new ADT_A01();
 		this.updateMSH(message.getMSH(), "ADT", "A08");
 		message.getMSH().getVersionID().getVersionID().setValue("2.3.1");

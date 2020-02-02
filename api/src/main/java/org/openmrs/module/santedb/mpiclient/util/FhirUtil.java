@@ -369,11 +369,10 @@ public class FhirUtil {
 				PatientIdentifier patientIdentifier = this.interpretFhirId(id);
 				List<PatientIdentifierType> identifierTypes = new ArrayList<PatientIdentifierType>();
 				identifierTypes.add(patientIdentifier.getIdentifierType());
-				List<Patient> matchPatient = Context.getPatientService().getPatients(null,
-						patientIdentifier.getIdentifier(), identifierTypes, false);
+				List<PatientIdentifier> matchPatientIds = Context.getPatientService().getPatientIdentifiers(patientIdentifier.getIdentifier(), identifierTypes, null, null, null);
 
-				if (matchPatient != null && matchPatient.size() > 0)
-					patient.setId(matchPatient.get(0).getId());
+				if (matchPatientIds != null && matchPatientIds.size() > 0)
+					patient.setId(matchPatientIds.get(0).getPatient().getId());
 				patient.addIdentifier(patientIdentifier);
 			} else {
 				PatientIdentifier patId = this.interpretFhirId(id);
