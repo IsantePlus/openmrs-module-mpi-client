@@ -381,6 +381,18 @@ public class FhirUtil {
 			}
 		}
 
+		// Enterprise root? 
+		if(null != this.m_configuration.getEnterprisePatientIdRoot() && !this.m_configuration.getEnterprisePatientIdRoot().isEmpty())
+		{
+			Identifier fhirSysId = new Identifier();
+			fhirSysId.setSystem(this.m_configuration.getEnterprisePatientIdRoot());
+			fhirSysId.setValue(fhirPatient.getId());
+			PatientIdentifier sysId = this.interpretFhirId(fhirSysId);
+			if(sysId != null) {
+				patient.addIdentifier(sysId);
+			}
+		}
+		
 		// Attempt to copy names
 		for (HumanName name : fhirPatient.getName()) {
 

@@ -81,6 +81,13 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	private IGenericClient getClient() throws MpiClientException {
 
 		FhirContext ctx = FhirContext.forR4();
+		
+		if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
+		{
+			String[] proxyData = this.m_configuration.getProxy().split(":");
+			ctx.getRestfulClientFactory().setProxy(proxyData[0], Integer.parseInt(proxyData[1]));
+		}
+		
 		IGenericClient client = ctx.newRestfulGenericClient(this.m_configuration.getPixEndpoint());
 		client.setEncoding(EncodingEnum.JSON);
 
@@ -245,6 +252,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 
 			List<MpiPatient> retVal = new ArrayList<MpiPatient>();
 			for (BundleEntryComponent result : results.getEntry()) {
+				
 				org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
 				return this.m_messageUtil.parseFhirPatient(pat);
 			}
@@ -348,6 +356,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			if (!result.getCreated())
 				throw new MpiClientException(
 						String.format("Error from MPI :> %s", result.getResource().getClass().getName()));
+			
 		} catch (MpiClientException e) {
 			log.error("Error in FHIR PIX message", e);
 			e.printStackTrace();

@@ -222,6 +222,11 @@
 		<defaultValue>hl7</defaultValue>
 		<description>The messaging format (HL7 or FHIR) to use to interact with the MPI</description>
 	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.http.proxyAddress</property>
+		<defaultValue></defaultValue>
+		<description>The proxy to use for HTTP traffic</description>
+	</globalProperty>
 		<!--
 	<dwr>
 		<allow>

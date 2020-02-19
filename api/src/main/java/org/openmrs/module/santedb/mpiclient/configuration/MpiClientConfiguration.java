@@ -85,6 +85,8 @@ public class MpiClientConfiguration {
 	public static final String PROP_NAME_AUTO_PIX = "mpi-client.pid.autoXref";
 	public static final String PROP_SEARCH_DATE_FUZZ = "mpi-client.search.dateFuzz";
 	
+	public static final String PROP_HTTP_PROXY = "mpi-client.http.proxyAddress";
+	
     private Map<String, Object> m_cachedProperties = new HashMap<String, Object>();
 
 	
@@ -150,6 +152,14 @@ public class MpiClientConfiguration {
 	 */
 	public void clearCache() {
 		this.m_cachedProperties.clear();
+	}
+	
+	/**
+	 * Gets the message format
+	 * @return
+	 */
+	public String getProxy() {
+		return this.getOrCreateGlobalProperty(PROP_HTTP_PROXY, "");
 	}
 	
 	/**
