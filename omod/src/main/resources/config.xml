@@ -191,7 +191,11 @@
 		<defaultValue>Father's Name:NK1-2-2?NK1-3=FTH,Mother's Name:PID-6-2,Place of Birth:PID-23,Telephone contact:PID-13,Email address:PID-14,National ID=PID-19</defaultValue>
 		<description>PersonAttributes (in OpenMRS) you would like imported from the message. Format= attr_name:segment_path?segment_guard=guard_value, . For example, to copy NK1-2-2 to fathers name: Father's Name=NK1-2-2?NK1-3=FTH</description>
 	</globalProperty>		
-	
+	<globalProperty>
+		<property>mpi-client.security.authType</property>
+		<defaultValue></defaultValue>
+		<description>Identifies the authentication type. Use blank, oauth or basic</description>
+	</globalProperty>	
     <globalProperty>
 		<property>mpi-client.pid.nameRewriteRegex</property>
 		<defaultValue></defaultValue>

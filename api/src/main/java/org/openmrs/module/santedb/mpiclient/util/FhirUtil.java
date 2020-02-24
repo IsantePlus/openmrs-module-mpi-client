@@ -386,7 +386,8 @@ public class FhirUtil {
 		{
 			Identifier fhirSysId = new Identifier();
 			fhirSysId.setSystem(this.m_configuration.getEnterprisePatientIdRoot());
-			fhirSysId.setValue(fhirPatient.getId());
+			fhirSysId.setValue(fhirPatient.getIdElement().toUnqualifiedVersionless().getValue());
+			log.warn(String.format("Enterprise ID %s will be mapped", fhirPatient.getIdElement().toUnqualifiedVersionless().getValue()));
 			PatientIdentifier sysId = this.interpretFhirId(fhirSysId);
 			if(sysId != null) {
 				patient.addIdentifier(sysId);

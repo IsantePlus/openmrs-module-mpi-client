@@ -79,6 +79,8 @@ public class PatientSyncWorker extends Thread {
 						if(xrefDomain.equals(identifierMaps.get(key)))
 						{
 							pit = Context.getPatientService().getPatientIdentifierTypeByName(key);
+							if(pit == null)
+								log.warn(String.format("%s is supposed to map to %s but getIdentifierTypeByName returned null", xrefDomain, key));
 							break;
 						}
 					

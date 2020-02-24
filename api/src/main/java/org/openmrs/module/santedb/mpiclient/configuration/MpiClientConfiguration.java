@@ -86,6 +86,7 @@ public class MpiClientConfiguration {
 	public static final String PROP_SEARCH_DATE_FUZZ = "mpi-client.search.dateFuzz";
 	
 	public static final String PROP_HTTP_PROXY = "mpi-client.http.proxyAddress";
+	public static final String PROP_AUTH_TYPE = "mpi-client.security.authType";
 	
     private Map<String, Object> m_cachedProperties = new HashMap<String, Object>();
 
@@ -264,6 +265,13 @@ public class MpiClientConfiguration {
     	return this.getOrCreateGlobalProperty(PROP_NAME_PDQ_EP, "127.0.0.1");
     }
     
+    /**
+     * Get the authentication type port
+     * @return
+     */
+    public String getAuthenticationMode() {
+    	return this.getOrCreateGlobalProperty(PROP_AUTH_TYPE, "");
+    }
     /**
      * Get the PDQ port
      * @return

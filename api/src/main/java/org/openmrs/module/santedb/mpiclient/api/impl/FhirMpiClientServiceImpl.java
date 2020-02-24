@@ -27,6 +27,8 @@ import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
+import org.hl7.fhir.r4.model.codesystems.LinkType;
 import org.marc.everest.datatypes.II;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
@@ -43,9 +45,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.PerformanceOptionsEnum;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
+import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
 import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
 import ca.uhn.fhir.rest.gclient.IQuery;
 import ca.uhn.fhir.rest.gclient.IUntypedQuery;
@@ -78,7 +83,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	/**
 	 * Get the client as configured in this copy of the OMOD
 	 */
-	private IGenericClient getClient() throws MpiClientException {
+	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
 
 		FhirContext ctx = FhirContext.forR4();
 		
@@ -88,12 +93,15 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			ctx.getRestfulClientFactory().setProxy(proxyData[0], Integer.parseInt(proxyData[1]));
 		}
 		
-		IGenericClient client = ctx.newRestfulGenericClient(this.m_configuration.getPixEndpoint());
+		IGenericClient client = ctx.newRestfulGenericClient(isSearch ?
+				this.m_configuration.getPdqEndpoint() :
+				this.m_configuration.getPixEndpoint());
 		client.setEncoding(EncodingEnum.JSON);
-
+		ctx.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
 		// Is an IDP provided?
 		if (this.m_configuration.getIdentityProviderUrl() != null
-				&& !this.m_configuration.getIdentityProviderUrl().isEmpty()) {
+				&& !this.m_configuration.getIdentityProviderUrl().isEmpty()
+				&& "oauth".equals(this.m_configuration.getAuthenticationMode())) {
 
 			// Call the IDP
 			CloseableHttpClient oauthClientCredentialsClient = HttpClientBuilder.create().build();
@@ -159,6 +167,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 				}
 			}
 		}
+		else if("basic".equals(this.m_configuration.getAuthenticationMode())) {
+			client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
+		}
 		return client;
 	}
 
@@ -170,7 +181,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,
 			PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException {
 
-		IQuery<IBaseBundle> query = this.getClient().search().forResource("Patient");
+		IQuery<IBaseBundle> query = this.getClient(true).search().forResource("Patient");
 
 		if (familyName != null && !familyName.isEmpty())
 			query = query.where(org.hl7.fhir.r4.model.Patient.FAMILY.contains().value(familyName));
@@ -225,6 +236,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			List<MpiPatient> retVal = new ArrayList<MpiPatient>();
 			for (BundleEntryComponent result : results.getEntry()) {
 				org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
+				
 				retVal.add(this.m_messageUtil.parseFhirPatient(pat));
 			}
 			return retVal;
@@ -246,7 +258,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		try {
 
 			Bundle results = this
-					.getClient().search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
+					.getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
 							.exactly().systemAndIdentifier(assigningAuthority, identifier))
 					.count(1).returnBundle(Bundle.class).execute();
 
@@ -303,7 +315,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			
 			
 			Bundle results = this
-					.getClient().search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
+					.getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
 							.exactly().systemAndIdentifier(assigningAuthority, identifier))
 					.count(2).returnBundle(Bundle.class).execute();
 
@@ -314,6 +326,15 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			// Is there a result?
 			for (BundleEntryComponent result : results.getEntry()) {
 				org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
+				
+				// Is this patient linked to another patient?
+				if(pat.getLink() != null)
+					for(PatientLinkComponent lnk : pat.getLink())
+					{
+						if(LinkType.REFER.equals(lnk.getType())) {
+							pat = (org.hl7.fhir.r4.model.Patient)lnk.getOtherTarget();
+						}
+					}
 				MpiPatient mpiPatient = this.m_messageUtil.parseFhirPatient(pat);
 				
 				// Now look for the identity domain we want to xref to
@@ -351,7 +372,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 
 		try {
 			admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
-			IGenericClient client = this.getClient();
+			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.create().resource(admitMessage).execute();
 			if (!result.getCreated())
 				throw new MpiClientException(
@@ -381,7 +402,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 
 		try {
 			admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
-			IGenericClient client = this.getClient();
+			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.update().resource(admitMessage).execute();
 			if (!result.getCreated())
 				throw new MpiClientException(
