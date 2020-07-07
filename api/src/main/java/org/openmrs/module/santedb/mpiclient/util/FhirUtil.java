@@ -18,40 +18,32 @@ package org.openmrs.module.santedb.mpiclient.util;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import ca.uhn.hl7v2.HL7Exception;
+import ca.uhn.hl7v2.model.DataTypeException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hl7.fhir.r4.model.Address;
+import org.hl7.fhir.r4.model.Address.AddressUse;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.DateType;
-import org.hl7.fhir.r4.model.HumanName;
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Address.AddressUse;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.HumanName.NameUse;
-import org.marc.everest.datatypes.TS;
+import org.hl7.fhir.r4.model.Identifier;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
-import org.openmrs.Person;
 import org.openmrs.PersonAddress;
-import org.openmrs.PersonAttribute;
-import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
-import org.openmrs.Relationship;
-import org.openmrs.RelationshipType;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
-
-import ca.uhn.hl7v2.HL7Exception;
-import ca.uhn.hl7v2.model.DataTypeException;
 
 
 public class FhirUtil {
@@ -274,6 +266,7 @@ public class FhirUtil {
 	 * @throws HL7Exception
 	 * @throws RegexSyntaxException
 	 */
+	// TODO: replace with fhir2 functionality
 	public org.hl7.fhir.r4.model.Patient createFhirPatient(Patient patient, boolean localIdOnly)
 			throws HL7Exception {
 
@@ -360,6 +353,7 @@ public class FhirUtil {
 	 * @param fhirPatient The FHIR patient to be parsed
 	 * @return The OpenMRS patient
 	 */
+	// TODO: replace with fhir2 functionality (translator MpiPatient <-> Patient)
 	public MpiPatient parseFhirPatient(org.hl7.fhir.r4.model.Patient fhirPatient)
 	{
 		MpiPatient patient = new MpiPatient();

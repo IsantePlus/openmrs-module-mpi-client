@@ -20,16 +20,26 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.UnknownHostException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.api.EncodingEnum;
+import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.client.apache.ApacheRestfulClientFactory;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
+import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
+import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
+import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
+import ca.uhn.fhir.rest.gclient.IQuery;
+import com.google.common.io.CharStreams;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import lombok.AccessLevel;
+import lombok.Setter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
@@ -38,43 +48,24 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.dcm4che3.audit.AuditMessage;
 import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
-import org.marc.everest.datatypes.II;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
+import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
-import org.openmrs.module.santedb.mpiclient.util.AuditUtil;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
-import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
-
-import com.google.common.io.CharStreams;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.PerformanceOptionsEnum;
-import ca.uhn.fhir.rest.api.EncodingEnum;
-import ca.uhn.fhir.rest.api.MethodOutcome;
-import ca.uhn.fhir.rest.client.api.IGenericClient;
-import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
-import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
-import ca.uhn.fhir.rest.gclient.IQuery;
-import ca.uhn.fhir.rest.gclient.IUntypedQuery;
-import ca.uhn.hl7v2.HL7Exception;
-import ca.uhn.hl7v2.model.Message;
-import ca.uhn.hl7v2.model.v25.message.QBP_Q21;
-import ca.uhn.hl7v2.parser.PipeParser;
-import ca.uhn.hl7v2.util.Terser;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 /**
  * MPI Client Service Implementation using FHIR
@@ -82,7 +73,9 @@ import ca.uhn.hl7v2.util.Terser;
  * @author fyfej
  *
  */
-public class FhirMpiClientServiceImpl implements MpiClientWorker {
+
+@Setter(AccessLevel.PACKAGE)
+public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationContextAware {
 
 	// Lock object
 	private Object m_lockObject = new Object();
@@ -90,37 +83,61 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	protected AuditLogger m_logger = null;
 	// Log
 	private static Log log = LogFactory.getLog(HL7MpiClientServiceImpl.class);
+
+	// Application Context
+	private static ApplicationContext applicationContext;
+
 	// Message utility
 	private FhirUtil m_messageUtil = FhirUtil.getInstance();
 
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
+	@Autowired
+	private IRestfulClientFactory clientFactory;
+
+	@Autowired
+	private PatientTranslator patientTranslator;
+
+	@Autowired
+	CloseableHttpClient httpClient;
+
+
 	/**
 	 * Get the client as configured in this copy of the OMOD
 	 */
-	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
+	// TODO: use existing FHIR context
 
-		FhirContext ctx = FhirContext.forR4();
-		
+	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
+		FhirContext ctx = null;
+
 		if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
 		{
 			String[] proxyData = this.m_configuration.getProxy().split(":");
 			ctx.getRestfulClientFactory().setProxy(proxyData[0], Integer.parseInt(proxyData[1]));
 		}
-		
+
+		ctx = applicationContext.getBean(FhirContext.class);
+		((ApacheRestfulClientFactory)clientFactory).setFhirContext(ctx);
+		clientFactory.setHttpClient(httpClient);
+		ctx.setRestfulClientFactory(clientFactory);
+
 		IGenericClient client = ctx.newRestfulGenericClient(isSearch ?
 				this.m_configuration.getPdqEndpoint() :
 				this.m_configuration.getPixEndpoint());
+
 		client.setEncoding(EncodingEnum.JSON);
 		ctx.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
+
 		// Is an IDP provided?
+		// TODO: Refactor
 		if (this.m_configuration.getIdentityProviderUrl() != null
 				&& !this.m_configuration.getIdentityProviderUrl().isEmpty()
 				&& "oauth".equals(this.m_configuration.getAuthenticationMode())) {
 
 			// Call the IDP
 			CloseableHttpClient oauthClientCredentialsClient = HttpClientBuilder.create().build();
+
 			try {
 				HttpPost post = new HttpPost(this.m_configuration.getIdentityProviderUrl());
 				post.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -183,6 +200,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 				}
 			}
 		}
+		// Basic Auth
 		else if("basic".equals(this.m_configuration.getAuthenticationMode())) {
 			client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
 		}
@@ -190,7 +208,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	}
 
 	/**
-	 * Search for patients
+	 * Search for patients in the MPI
 	 */
 	@Override
 	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
@@ -252,8 +270,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			List<MpiPatient> retVal = new ArrayList<MpiPatient>();
 			for (BundleEntryComponent result : results.getEntry()) {
 				org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-				
-				retVal.add(this.m_messageUtil.parseFhirPatient(pat));
+
+				// TODO: Create module-specific translator: Fhir.Patient <--> MpiPatient
+				retVal.add((MpiPatient)patientTranslator.toOpenmrsType(pat));
 			}
 			return retVal;
 		} catch (Exception e) {
@@ -282,6 +301,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			for (BundleEntryComponent result : results.getEntry()) {
 				
 				org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
+				// TODO: use fhir2 translator to translate this
 				return this.m_messageUtil.parseFhirPatient(pat);
 			}
 			return null; // no results
@@ -351,6 +371,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 							pat = (org.hl7.fhir.r4.model.Patient)lnk.getOtherTarget();
 						}
 					}
+
+				// TODO: again, translation
 				MpiPatient mpiPatient = this.m_messageUtil.parseFhirPatient(pat);
 				
 				// Now look for the identity domain we want to xref to
@@ -387,7 +409,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
 
 		try {
-			admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
+			// TODO: use the fhir2 translator
+
+			// admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
+			admitMessage = patientTranslator.toFhirResource(patient);
+
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.create().resource(admitMessage).execute();
 			if (!result.getCreated())
@@ -417,7 +443,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
 
 		try {
-			admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
+			// TODO: use fhir2 translator
+
+			// admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
+			admitMessage = patientTranslator.toFhirResource(patient);
+
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.update().resource(admitMessage).execute();
 			if (!result.getCreated())
@@ -439,6 +469,12 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	public AuditLogger getAuditLogger() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	// Application context aware
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
 	}
 
 }
