@@ -10,3 +10,5 @@ target
 *.ear
 /target/*
 */doc/*
+*.iml
+.idea
