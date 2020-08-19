@@ -64,7 +64,7 @@ import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
  * @author fyfej
  *
  */
-public class FhirMpiClientServiceImpl implements MpiClientWorker {
+public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationContextAware {
 
 	// Lock object
 	private Object m_lockObject = new Object();
@@ -82,8 +82,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	 * Get the client as configured in this copy of the OMOD
 	 */
 	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
-
-		FhirContext ctx = FhirContext.forR4();
+		FhirContext ctx = applicationContext.getBean(FhirContext.class);
 		
 		if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
 		{
@@ -423,4 +422,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		return null;
 	}
 
+	// Application context aware
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
+	}
 }
