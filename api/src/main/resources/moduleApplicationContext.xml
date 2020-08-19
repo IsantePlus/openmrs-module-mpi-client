@@ -7,6 +7,8 @@
 
 	<context:component-scan base-package="org.openmrs.module.santedb.mpiclient"/>
 
+	<bean name="mpiRestfulClientFactory" class="ca.uhn.fhir.rest.client.apache.ApacheRestfulClientFactory" />
+
 	<bean parent="serviceContext">
 		<property name="moduleService">
 			<list>

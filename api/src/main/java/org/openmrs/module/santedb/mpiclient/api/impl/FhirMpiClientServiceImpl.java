@@ -87,8 +87,14 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	 * Get the client as configured in this copy of the OMOD
 	 */
 	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
+		try {
+			applicationContext.getAutowireCapableBeanFactory().autowireBean(this);
+		} catch (Exception e) {
+			// return;
+		}
+
 		FhirContext ctx = applicationContext.getBean(FhirContext.class);
-		
+
 		if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
 		{
 			String[] proxyData = this.m_configuration.getProxy().split(":");
