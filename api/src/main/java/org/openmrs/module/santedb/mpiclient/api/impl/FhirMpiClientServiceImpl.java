@@ -57,6 +57,9 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 /**
  * MPI Client Service Implementation using FHIR
@@ -77,6 +80,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
+
+	private static ApplicationContext applicationContext;
 
 	/**
 	 * Get the client as configured in this copy of the OMOD
