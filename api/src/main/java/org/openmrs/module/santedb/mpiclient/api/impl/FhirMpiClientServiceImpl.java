@@ -30,8 +30,8 @@ import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
-import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
+//import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
+//import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
 import ca.uhn.fhir.rest.gclient.IQuery;
 import com.google.common.io.CharStreams;
 import com.google.gson.JsonObject;
@@ -57,9 +57,8 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  * MPI Client Service Implementation using FHIR
@@ -67,7 +66,8 @@ import org.springframework.context.ApplicationContextAware;
  * @author fyfej
  *
  */
-public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationContextAware {
+@Component
+public class FhirMpiClientServiceImpl implements MpiClientWorker {
 
 	// Lock object
 	private Object m_lockObject = new Object();
@@ -81,19 +81,21 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
-	private static ApplicationContext applicationContext;
+//	private static ApplicationContext applicationContext;
+	@Autowired
+	private static FhirContext ctx;
 
 	/**
 	 * Get the client as configured in this copy of the OMOD
 	 */
 	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
-		try {
-			applicationContext.getAutowireCapableBeanFactory().autowireBean(this);
-		} catch (Exception e) {
-			// return;
-		}
+//		try {
+//			applicationContext.getAutowireCapableBeanFactory().autowireBean(this);
+//		} catch (Exception e) {
+//			// return;
+//		}
 
-		FhirContext ctx = applicationContext.getBean(FhirContext.class);
+		// FhirContext ctx = applicationContext.getBean(FhirContext.class);
 
 		if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
 		{
@@ -153,7 +155,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 						JsonObject oauthResponse = parser.parse(jsonText).getAsJsonObject();
 						String token = oauthResponse.get("access_token").getAsString();
 						log.warn(String.format("Using token: %s", token));
-						client.registerInterceptor(new BearerTokenAuthInterceptor(token));
+						// client.registerInterceptor(new BearerTokenAuthInterceptor(token));
 
 					} finally {
 						inStream.close();
@@ -178,7 +180,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			}
 		}
 		else if("basic".equals(this.m_configuration.getAuthenticationMode())) {
-			client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
+			// client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
 		}
 		return client;
 	}
@@ -436,8 +438,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	}
 
 	// Application context aware
-	@Override
-	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-		this.applicationContext = applicationContext;
-	}
+//	@Override
+//	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+//		this.applicationContext = applicationContext;
+//	}
 }
