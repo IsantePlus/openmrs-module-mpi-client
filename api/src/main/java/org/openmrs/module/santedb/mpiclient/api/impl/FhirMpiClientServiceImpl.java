@@ -104,8 +104,10 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 		IGenericClient client = ctx.newRestfulGenericClient(isSearch ?
 				this.m_configuration.getPdqEndpoint() :
 				this.m_configuration.getPixEndpoint());
+
 		client.setEncoding(EncodingEnum.JSON);
 		ctx.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
+
 		// Is an IDP provided?
 		if (this.m_configuration.getIdentityProviderUrl() != null
 				&& !this.m_configuration.getIdentityProviderUrl().isEmpty()
