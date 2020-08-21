@@ -58,8 +58,11 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
 /**
@@ -69,7 +72,7 @@ import org.springframework.stereotype.Component;
  *
  */
 @Component
-public class FhirMpiClientServiceImpl implements MpiClientWorker {
+public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationContextAware {
 
 	// Lock object
 	private Object m_lockObject = new Object();
@@ -82,6 +85,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
+
+	private ApplicationContext applicationContext;
 
 	@Autowired
 	@Qualifier("fhirR4")
@@ -390,7 +395,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	 */
 	@Override
 	public void exportPatient(Patient patient) throws MpiClientException {
-
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
 
 		try {
@@ -446,5 +450,10 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	public AuditLogger getAuditLogger() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
 	}
 }
