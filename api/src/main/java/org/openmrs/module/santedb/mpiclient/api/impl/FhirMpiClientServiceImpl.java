@@ -30,6 +30,8 @@ import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
+import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
+import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
 import ca.uhn.fhir.rest.gclient.IQuery;
 import com.google.common.io.CharStreams;
 import com.google.gson.JsonObject;
@@ -55,8 +57,6 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 /**
@@ -81,14 +81,16 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
 //	private static ApplicationContext applicationContext;
-	@Autowired
-	@Qualifier("fhirR4")
-	private FhirContext ctx;
+//	@Autowired
+//	@Qualifier("fhirR4")
+//	private FhirContext ctx;
 
 	/**
 	 * Get the client as configured in this copy of the OMOD
 	 */
 	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
+		FhirContext ctx = FhirContext.forR4();
+
 		if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
 		{
 			String[] proxyData = this.m_configuration.getProxy().split(":");
@@ -147,7 +149,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 						JsonObject oauthResponse = parser.parse(jsonText).getAsJsonObject();
 						String token = oauthResponse.get("access_token").getAsString();
 						log.warn(String.format("Using token: %s", token));
-						// client.registerInterceptor(new BearerTokenAuthInterceptor(token));
+						client.registerInterceptor(new BearerTokenAuthInterceptor(token));
 
 					} finally {
 						inStream.close();
@@ -172,7 +174,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			}
 		}
 		else if("basic".equals(this.m_configuration.getAuthenticationMode())) {
-			// client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
+			client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
 		}
 		return client;
 	}
