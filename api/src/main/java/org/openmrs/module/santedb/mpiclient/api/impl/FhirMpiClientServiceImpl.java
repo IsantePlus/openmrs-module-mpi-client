@@ -58,8 +58,9 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
-import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
 /**
  * MPI Client Service Implementation using FHIR
@@ -82,17 +83,12 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
-//	private static ApplicationContext applicationContext;
-//	@Autowired
-//	@Qualifier("fhirR4")
-//	private FhirContext ctx;
+	@Autowired
+	@Qualifier("fhirR4")
+	private FhirContext ctx;
 
 	@Autowired
 	private PatientTranslator patientTranslator;
-
-	@Autowired
-	CloseableHttpClient httpClient;
-
 
 	/**
 	 * Get the client as configured in this copy of the OMOD
@@ -357,9 +353,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 						}
 					}
 
-				// TODO: again, translation
-				MpiPatient mpiPatient = this.m_messageUtil.parseFhirPatient(pat);
-				
+				MpiPatient mpiPatient = (MpiPatient)patientTranslator.toOpenmrsType(pat);
+
 				// Now look for the identity domain we want to xref to
 				for(PatientIdentifier pid : mpiPatient.getIdentifiers())
 				{
@@ -378,6 +373,12 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		}
 	}
 
+	/**
+	 * Imports patient from MPI? Was in not implemented due to lack of FHIR create capabilites in OpenMRS?
+	 * @param patient
+	 * @return
+	 * @throws MpiClientException
+	 */
 	@Override
 	public Patient importPatient(MpiPatient patient) throws MpiClientException {
 		// TODO Auto-generated method stub
@@ -394,9 +395,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
 
 		try {
-			// TODO: use the fhir2 translator
-
-			// admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
 			admitMessage = patientTranslator.toFhirResource(patient);
 
 			IGenericClient client = this.getClient(false);
@@ -423,14 +421,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	 */
 	@Override
 	public void updatePatient(Patient patient) throws MpiClientException {
-		// TODO Auto-generated method stub
-
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
 
 		try {
-			// TODO: use fhir2 translator
-
-			// admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
 			admitMessage = patientTranslator.toFhirResource(patient);
 
 			IGenericClient client = this.getClient(false);
