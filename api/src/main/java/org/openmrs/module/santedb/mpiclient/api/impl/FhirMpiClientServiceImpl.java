@@ -333,13 +333,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 				log.warn(String.format("Patient %s has no good cross reference identities to use", patient.getId()));
 				return null;
 			}
-			
-			
+
 			Bundle results = this
 					.getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
 							.exactly().systemAndIdentifier(assigningAuthority, identifier))
 					.count(2).returnBundle(Bundle.class).execute();
-
 			// ASSERT: Only 1 result
 			if(results.getEntry().size() != 1)
 				throw new MpiClientException(String.format("Found ambiguous matches (%s matches) on MPI, can't reliably xref this patient", results.getTotal()));
@@ -400,8 +398,13 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 		try {
 			admitMessage = patientTranslator.toFhirResource(patient);
 
+			// TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
+			// Temporary URI identifier
+			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patient.getPatientIdentifier().getIdentifier());
+
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.create().resource(admitMessage).execute();
+
 			if (!result.getCreated())
 				throw new MpiClientException(
 						String.format("Error from MPI :> %s", result.getResource().getClass().getName()));
@@ -428,6 +431,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
 		try {
 			admitMessage = patientTranslator.toFhirResource(patient);
+
+			// Temporary URI identifier
+			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patient.getPatientIdentifier().getIdentifier());
 
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.update().resource(admitMessage).execute();
