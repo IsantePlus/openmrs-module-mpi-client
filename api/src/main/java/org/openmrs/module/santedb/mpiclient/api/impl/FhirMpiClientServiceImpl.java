@@ -52,11 +52,17 @@ import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
+import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
 
 /**
@@ -66,7 +72,7 @@ import org.springframework.stereotype.Component;
  *
  */
 @Component
-public class FhirMpiClientServiceImpl implements MpiClientWorker {
+public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationContextAware {
 
 	// Lock object
 	private Object m_lockObject = new Object();
@@ -80,14 +86,20 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
-//	private static ApplicationContext applicationContext;
-//	@Autowired
-//	@Qualifier("fhirR4")
-//	private FhirContext ctx;
+	private ApplicationContext applicationContext;
+
+	@Autowired
+	@Qualifier("fhirR4")
+	private FhirContext ctx;
+
+	@Autowired
+	private PatientTranslator patientTranslator;
 
 	/**
 	 * Get the client as configured in this copy of the OMOD
 	 */
+	// TODO: use existing FHIR context
+
 	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
 		FhirContext ctx = FhirContext.forR4();
 
@@ -111,6 +123,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 
 			// Call the IDP
 			CloseableHttpClient oauthClientCredentialsClient = HttpClientBuilder.create().build();
+
 			try {
 				HttpPost post = new HttpPost(this.m_configuration.getIdentityProviderUrl());
 				post.addHeader("Content-Type", "application/x-www-form-urlencoded");
@@ -173,6 +186,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 				}
 			}
 		}
+		// Basic Auth
 		else if("basic".equals(this.m_configuration.getAuthenticationMode())) {
 			client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
 		}
@@ -180,7 +194,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	}
 
 	/**
-	 * Search for patients
+	 * Search for patients in the MPI
 	 */
 	@Override
 	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
@@ -242,8 +256,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			List<MpiPatient> retVal = new ArrayList<MpiPatient>();
 			for (BundleEntryComponent result : results.getEntry()) {
 				org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-				
-				retVal.add(this.m_messageUtil.parseFhirPatient(pat));
+
+				// TODO: Create module-specific translator: Fhir.Patient <--> MpiPatient
+				retVal.add((MpiPatient)patientTranslator.toOpenmrsType(pat));
 			}
 			return retVal;
 		} catch (Exception e) {
@@ -272,7 +287,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 			for (BundleEntryComponent result : results.getEntry()) {
 				
 				org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-				return this.m_messageUtil.parseFhirPatient(pat);
+				return (MpiPatient)patientTranslator.toOpenmrsType(pat);
 			}
 			return null; // no results
 		} catch (Exception e) {
@@ -318,13 +333,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 				log.warn(String.format("Patient %s has no good cross reference identities to use", patient.getId()));
 				return null;
 			}
-			
-			
+
 			Bundle results = this
 					.getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
 							.exactly().systemAndIdentifier(assigningAuthority, identifier))
 					.count(2).returnBundle(Bundle.class).execute();
-
 			// ASSERT: Only 1 result
 			if(results.getEntry().size() != 1)
 				throw new MpiClientException(String.format("Found ambiguous matches (%s matches) on MPI, can't reliably xref this patient", results.getTotal()));
@@ -341,8 +354,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 							pat = (org.hl7.fhir.r4.model.Patient)lnk.getOtherTarget();
 						}
 					}
-				MpiPatient mpiPatient = this.m_messageUtil.parseFhirPatient(pat);
-				
+
+				MpiPatient mpiPatient = (MpiPatient)patientTranslator.toOpenmrsType(pat);
+
 				// Now look for the identity domain we want to xref to
 				for(PatientIdentifier pid : mpiPatient.getIdentifiers())
 				{
@@ -361,6 +375,12 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		}
 	}
 
+	/**
+	 * Imports patient from MPI? Was in not implemented due to lack of FHIR create capabilites in OpenMRS?
+	 * @param patient
+	 * @return
+	 * @throws MpiClientException
+	 */
 	@Override
 	public Patient importPatient(MpiPatient patient) throws MpiClientException {
 		// TODO Auto-generated method stub
@@ -373,13 +393,18 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	 */
 	@Override
 	public void exportPatient(Patient patient) throws MpiClientException {
-
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
 
 		try {
-			admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
+			admitMessage = patientTranslator.toFhirResource(patient);
+
+			// TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
+			// Temporary URI identifier
+			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patient.getPatientIdentifier().getIdentifier());
+
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.create().resource(admitMessage).execute();
+
 			if (!result.getCreated())
 				throw new MpiClientException(
 						String.format("Error from MPI :> %s", result.getResource().getClass().getName()));
@@ -402,12 +427,14 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	 */
 	@Override
 	public void updatePatient(Patient patient) throws MpiClientException {
-		// TODO Auto-generated method stub
-
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
 
 		try {
-			admitMessage = this.m_messageUtil.createFhirPatient(patient, false);
+			admitMessage = patientTranslator.toFhirResource(patient);
+
+			// Temporary URI identifier
+			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patient.getPatientIdentifier().getIdentifier());
+
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.update().resource(admitMessage).execute();
 			if (!result.getCreated())
@@ -431,9 +458,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		return null;
 	}
 
-	// Application context aware
-//	@Override
-//	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-//		this.applicationContext = applicationContext;
-//	}
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
+	}
 }

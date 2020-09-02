@@ -29,6 +29,7 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Implementation of the health information exchange service
@@ -38,7 +39,9 @@ import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 public class MpiClientServiceImpl extends BaseOpenmrsService
 		implements MpiClientService {
 
+	@Autowired
 	private FhirMpiClientServiceImpl m_fhirService;
+
 	private HL7MpiClientServiceImpl m_hl7Service;
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
@@ -58,7 +61,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	 * @summary Creates a new instance of the MPI Client Service Implementation
 	 */
 	public MpiClientServiceImpl() {
-		this.m_fhirService = new FhirMpiClientServiceImpl(); // TODO: FHIR implementation
+		// this.m_fhirService = new FhirMpiClientServiceImpl(); // TODO: FHIR implementation
 		this.m_hl7Service = new HL7MpiClientServiceImpl();
 	}
 

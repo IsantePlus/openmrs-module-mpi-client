@@ -161,17 +161,4 @@
 			</snapshots>
 		</pluginRepository>
 	</pluginRepositories>
-
-
-<!--	<distributionManagement>-->
-<!--		<site>-->
-<!--			<id>santesuite-main</id>-->
-<!--			<url>file://C:/temp/mvn/org/santesuite</url>-->
-<!--		</site>-->
-<!--		<repository>-->
-<!--			<id>santesuite</id>-->
-<!--			<url>file://C:/temp/mvn</url>-->
-<!--		</repository>-->
-
-<!--	</distributionManagement>-->
 </project>
