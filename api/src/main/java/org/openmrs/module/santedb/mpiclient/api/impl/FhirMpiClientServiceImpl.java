@@ -20,16 +20,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.UnknownHostException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.api.EncodingEnum;
+import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
+import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
+import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
+import ca.uhn.fhir.rest.gclient.IQuery;
+import com.google.common.io.CharStreams;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
@@ -38,43 +44,20 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.dcm4che3.audit.AuditMessage;
 import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
-import org.marc.everest.datatypes.II;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
-import org.openmrs.module.santedb.mpiclient.util.AuditUtil;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
-import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
-
-import com.google.common.io.CharStreams;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.PerformanceOptionsEnum;
-import ca.uhn.fhir.rest.api.EncodingEnum;
-import ca.uhn.fhir.rest.api.MethodOutcome;
-import ca.uhn.fhir.rest.client.api.IGenericClient;
-import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
-import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
-import ca.uhn.fhir.rest.gclient.IQuery;
-import ca.uhn.fhir.rest.gclient.IUntypedQuery;
-import ca.uhn.hl7v2.HL7Exception;
-import ca.uhn.hl7v2.model.Message;
-import ca.uhn.hl7v2.model.v25.message.QBP_Q21;
-import ca.uhn.hl7v2.parser.PipeParser;
-import ca.uhn.hl7v2.util.Terser;
+import org.springframework.stereotype.Component;
 
 /**
  * MPI Client Service Implementation using FHIR
@@ -82,6 +65,7 @@ import ca.uhn.hl7v2.util.Terser;
  * @author fyfej
  *
  */
+@Component
 public class FhirMpiClientServiceImpl implements MpiClientWorker {
 
 	// Lock object
@@ -96,13 +80,17 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
+//	private static ApplicationContext applicationContext;
+//	@Autowired
+//	@Qualifier("fhirR4")
+//	private FhirContext ctx;
+
 	/**
 	 * Get the client as configured in this copy of the OMOD
 	 */
 	private IGenericClient getClient(boolean isSearch) throws MpiClientException {
-
 		FhirContext ctx = FhirContext.forR4();
-		
+
 		if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
 		{
 			String[] proxyData = this.m_configuration.getProxy().split(":");
@@ -112,8 +100,10 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		IGenericClient client = ctx.newRestfulGenericClient(isSearch ?
 				this.m_configuration.getPdqEndpoint() :
 				this.m_configuration.getPixEndpoint());
+
 		client.setEncoding(EncodingEnum.JSON);
 		ctx.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
+
 		// Is an IDP provided?
 		if (this.m_configuration.getIdentityProviderUrl() != null
 				&& !this.m_configuration.getIdentityProviderUrl().isEmpty()
@@ -441,4 +431,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker {
 		return null;
 	}
 
+	// Application context aware
+//	@Override
+//	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+//		this.applicationContext = applicationContext;
+//	}
 }
