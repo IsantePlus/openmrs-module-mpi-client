@@ -34,7 +34,6 @@ public class MpiClientConfiguration {
 
 	// Lock object
 	private static final Object s_lockObject = new Object();
-	private static final String PROP_NAME_BIRTHPLACE_CONCEPT = "mpi-client.reg.birthPlaceConcept";
 	// Singleton
 	private static MpiClientConfiguration s_instance;
 
@@ -88,6 +87,11 @@ public class MpiClientConfiguration {
 
 	public static final String PROP_HTTP_PROXY = "mpi-client.http.proxyAddress";
 	public static final String PROP_AUTH_TYPE = "mpi-client.security.authType";
+
+	public static final String PROP_NAME_REG_CONCEPT = "mpi-client.reg.conceptUuid";
+	private static final String PROP_NAME_MOTHERS_ATTRIBUTE_NAME = "mpi-client.reg.mothersName";
+
+
 	private Map<String, Object> m_cachedProperties = new HashMap<String, Object>();
 
 
@@ -402,19 +406,7 @@ public class MpiClientConfiguration {
 
 	public String getAuditRepositoryBindAddress() { return this.getOrCreateGlobalProperty(PROP_NAME_AR_LOCAL, ""); }
 
-	/**
-	 * Configurations for additional attributes and obs
-	 */
-
-	public static final String PROP_NAME_REG_CONCEPT = "mpi-client.reg.conceptUuid";
-
-	private static final String PROP_NAME_MOTHERS_ATTRIBUTE_NAME = "mpi-client.reg.mothersName";
-
-	private static final String PROP_NAME_BIRTHPLACE_ATTRIBUTE_NAME = "mpi-client.reg.birthPlace";
-
-	private static final String PROP_NAME_PATIENT_TELEPHONE_ATTRIBUTE_NAME = "mpi-client.reg.patientTelephoneNumber";
-
-	public String getRegistrationConceptUuid() {
+	public String registrationConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
@@ -422,35 +414,23 @@ public class MpiClientConfiguration {
 		return this.getOrCreateGlobalProperty(PROP_NAME_MOTHERS_ATTRIBUTE_NAME, "First Name of Mother");
 	}
 
-	public String getEmergencyContactConceptUuid() {
+	public String emergencyContactConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165210AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
-	public String getLegalContactConceptConceptUuid() {
+	public String legalContactConceptConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165211AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
-	public String getPrimaryMedicalContactConceptUuid() {
+	public String primaryMedicalContactConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165212AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
-	public String getSecondaryMedicalContactConceptUuid() {
+	public String secondaryMedicalContactConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165213AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
 	public String getRegistrationEncounterUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "873f968a-73a8-4f9c-ac78-9f4778b751b6");
-	}
-
-	public String getBirthPlaceConceptUuid() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_BIRTHPLACE_CONCEPT, "165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	}
-
-	public String getPatientTelephoneAttribute() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_PATIENT_TELEPHONE_ATTRIBUTE_NAME, "Telephone Number");
-	}
-
-	public String getBirthPlaceAttributeName() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_BIRTHPLACE_ATTRIBUTE_NAME, "Birthplace");
 	}
 }
