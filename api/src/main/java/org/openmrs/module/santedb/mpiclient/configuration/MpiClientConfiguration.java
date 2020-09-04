@@ -88,7 +88,6 @@ public class MpiClientConfiguration {
 
 	public static final String PROP_HTTP_PROXY = "mpi-client.http.proxyAddress";
 	public static final String PROP_AUTH_TYPE = "mpi-client.security.authType";
-
 	private Map<String, Object> m_cachedProperties = new HashMap<String, Object>();
 
 
