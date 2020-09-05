@@ -88,10 +88,6 @@ public class MpiClientConfiguration {
 	public static final String PROP_HTTP_PROXY = "mpi-client.http.proxyAddress";
 	public static final String PROP_AUTH_TYPE = "mpi-client.security.authType";
 
-	public static final String PROP_NAME_REG_CONCEPT = "mpi-client.reg.conceptUuid";
-	private static final String PROP_NAME_MOTHERS_ATTRIBUTE_NAME = "mpi-client.reg.mothersName";
-
-
 	private Map<String, Object> m_cachedProperties = new HashMap<String, Object>();
 
 
@@ -405,32 +401,4 @@ public class MpiClientConfiguration {
 	public String getNameRewriteRule() { return this.getOrCreateGlobalProperty(PROP_NAME_PAT_NAME_REWRITE, ""); }
 
 	public String getAuditRepositoryBindAddress() { return this.getOrCreateGlobalProperty(PROP_NAME_AR_LOCAL, ""); }
-
-	public String registrationConceptUuid() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	}
-
-	public String getMothersAttributeName() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_MOTHERS_ATTRIBUTE_NAME, "First Name of Mother");
-	}
-
-	public String emergencyContactConceptUuid() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165210AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	}
-
-	public String legalContactConceptConceptUuid() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165211AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	}
-
-	public String primaryMedicalContactConceptUuid() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165212AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	}
-
-	public String secondaryMedicalContactConceptUuid() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165213AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	}
-
-	public String getRegistrationEncounterUuid() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "873f968a-73a8-4f9c-ac78-9f4778b751b6");
-	}
 }
