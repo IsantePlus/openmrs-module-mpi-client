@@ -45,7 +45,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
-import org.hl7.fhir.instance.model.api.IBaseDatatype;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.HumanName;
@@ -55,15 +54,6 @@ import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PersonAttribute;
-import org.openmrs.Concept;
-import org.openmrs.Patient;
-import org.openmrs.PatientIdentifier;
-import org.openmrs.PersonAttribute;
-import org.openmrs.api.ConceptService;
-import org.openmrs.api.EncounterService;
-import org.openmrs.api.ObsService;
-import org.openmrs.api.context.Context;
-import org.openmrs.module.fhir2.api.translators.LocationTranslator;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
@@ -71,21 +61,17 @@ import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
-import org.openmrs.parameter.EncounterSearchCriteria;
-import org.openmrs.parameter.EncounterSearchCriteriaBuilder;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
-
-import static org.hl7.fhir.r4.model.Patient.*;
 
 /**
  * MPI Client Service Implementation using FHIR
  *
  * @author fyfej
+ *
  */
 @Component
 public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationContextAware {
