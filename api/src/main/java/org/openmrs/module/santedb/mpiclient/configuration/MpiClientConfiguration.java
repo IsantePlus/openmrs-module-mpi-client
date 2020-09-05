@@ -401,4 +401,39 @@ public class MpiClientConfiguration {
 	public String getNameRewriteRule() { return this.getOrCreateGlobalProperty(PROP_NAME_PAT_NAME_REWRITE, ""); }
 
 	public String getAuditRepositoryBindAddress() { return this.getOrCreateGlobalProperty(PROP_NAME_AR_LOCAL, ""); }
+
+	/**
+	 * Configurations for additional attributes and obs
+	 */
+
+	public static final String PROP_NAME_REG_CONCEPT = "mpi-client.reg.conceptUuid";
+	private static final String PROP_NAME_MOTHERS_ATTRIBUTE_NAME = "mpi-client.reg.mothersName";
+
+	public String registrationConceptUuid() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+	}
+
+	public String getMothersAttributeName() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_MOTHERS_ATTRIBUTE_NAME, "First Name of Mother");
+	}
+
+	public String emergencyContactConceptUuid() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165210AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+	}
+
+	public String legalContactConceptConceptUuid() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165211AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+	}
+
+	public String primaryMedicalContactConceptUuid() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165212AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+	}
+
+	public String secondaryMedicalContactConceptUuid() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165213AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+	}
+
+	public String getRegistrationEncounterUuid() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "873f968a-73a8-4f9c-ac78-9f4778b751b6");
+	}
 }
