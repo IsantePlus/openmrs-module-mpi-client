@@ -409,7 +409,7 @@ public class MpiClientConfiguration {
 	public static final String PROP_NAME_REG_CONCEPT = "mpi-client.reg.conceptUuid";
 	private static final String PROP_NAME_MOTHERS_ATTRIBUTE_NAME = "mpi-client.reg.mothersName";
 
-	public String registrationConceptUuid() {
+	public String getRegistrationConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
@@ -417,19 +417,19 @@ public class MpiClientConfiguration {
 		return this.getOrCreateGlobalProperty(PROP_NAME_MOTHERS_ATTRIBUTE_NAME, "First Name of Mother");
 	}
 
-	public String emergencyContactConceptUuid() {
+	public String getEmergencyContactConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165210AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
-	public String legalContactConceptConceptUuid() {
+	public String getLegalContactConceptConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165211AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
-	public String primaryMedicalContactConceptUuid() {
+	public String getPrimaryMedicalContactConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165212AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 
-	public String secondaryMedicalContactConceptUuid() {
+	public String getSecondaryMedicalContactConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165213AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
 

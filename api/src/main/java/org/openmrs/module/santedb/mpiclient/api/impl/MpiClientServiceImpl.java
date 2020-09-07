@@ -29,6 +29,7 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -195,12 +196,12 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 	 * Export patient using preferred messaging format
 	 */
 	@Override
-	public void exportPatient(Patient patient) throws MpiClientException {
+	public void exportPatient(MpiPatientExport patientExport) throws MpiClientException {
 		// TODO Auto-generated method stub
 		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
-			this.m_fhirService.exportPatient(patient);
+			this.m_fhirService.exportPatient(patientExport);
 		else 
-			this.m_hl7Service.exportPatient(patient);
+			this.m_hl7Service.exportPatient(patientExport);
 	}
 
 	/**

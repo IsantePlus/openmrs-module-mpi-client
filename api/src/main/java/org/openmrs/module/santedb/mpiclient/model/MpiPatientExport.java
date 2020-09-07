@@ -8,7 +8,10 @@ import org.openmrs.parameter.EncounterSearchCriteria;
 import org.openmrs.parameter.EncounterSearchCriteriaBuilder;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Encapsulates the data that may be collected and exported to the CR
@@ -18,7 +21,6 @@ public class MpiPatientExport implements Serializable {
     private List<Relationship> relationships;
     private Location birthPlace;
     private PersonAttribute mothersMaidenName;
-    private PersonAttribute patientTelephone;
     private Set<Obs> patientObs;
 
     public MpiPatientExport(Patient patient, List<Relationship> relationships, Location birthPlace, PersonAttribute mothersMaidenName, Set<Obs> patientObs) {
@@ -53,14 +55,8 @@ public class MpiPatientExport implements Serializable {
             return this.birthPlace;
         } else {
             ObsService obsService = Context.getObsService();
-            Concept registrationConcept = Context.getConceptService().getConceptByUuid(this.mConfiguration.getBirthPlaceConceptUuid());
-            Obs birthPlaceObs = obsService.getObservationsByPersonAndConcept(patient, registrationConcept).get(0);
-            if (birthPlaceObs != null) {
-                return birthPlaceObs.getLocation();
-            } else {
-                return null;
-            }
-
+            Concept registrationConcept = Context.getConceptService().getConceptByUuid(this.mConfiguration.getRegistrationConceptUuid());
+            return obsService.getObservationsByPersonAndConcept(patient, registrationConcept).get(0).getLocation();
         }
     }
 
@@ -76,14 +72,6 @@ public class MpiPatientExport implements Serializable {
         }
     }
 
-    public PersonAttribute getPatientTelephone() {
-        if (patientTelephone != null) {
-            return patientTelephone;
-        } else {
-            return patient.getAttribute(this.mConfiguration.getPatientTelephoneAttribute());
-        }
-    }
-
     public void setMothersMaidenName(PersonAttribute mothersMaidenName) {
         this.mothersMaidenName = mothersMaidenName;
     }
@@ -92,7 +80,14 @@ public class MpiPatientExport implements Serializable {
         if (patientObs != null && patientObs.size() > 0) {
             return patientObs;
         } else {
-            return new HashSet<>();
+            EncounterType registrationEncounterType = Context.getEncounterService().getEncounterTypeByUuid(this.mConfiguration.getRegistrationEncounterUuid());
+            Collection<EncounterType> encounterTypeList = new ArrayList<EncounterType>() {{
+                add(registrationEncounterType);
+            }};
+            EncounterSearchCriteriaBuilder builder = new EncounterSearchCriteriaBuilder();
+            EncounterSearchCriteria encounterSearchCriteria = builder.setPatient(patient).setEncounterTypes(encounterTypeList).createEncounterSearchCriteria();
+            Encounter registrationEncounter = Context.getEncounterService().getEncounters(encounterSearchCriteria).get(0);
+            return registrationEncounter.getObsAtTopLevel(false);
         }
 
     }
