@@ -18,7 +18,6 @@ package org.openmrs.module.santedb.mpiclient.api;
 
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 import org.dcm4che3.net.audit.AuditLogger;
 import org.openmrs.Patient;
@@ -26,7 +25,6 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
-import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -42,20 +40,17 @@ public interface MpiClientService extends OpenmrsService {
 	 * @param patientSearchString
 	 * @return
 	 */
-	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
-										  String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,
-										  PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace,
-										  Map<String, Object> otherDataPoints) throws MpiClientException;
+	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate, String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,  PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException;
+
 	/**
 	 * Searches the PDQ supplier for patients matching the specified search patient and returns patients matching the supplied object
 	 * @param patient - OpenMRS patient to find matches for
-	 * @param  otherDataPoints - additional data points for patient search
 	 * @return Wrapper list containing OpenMRS patients
 	 */
-	public List<MpiPatient> searchPatient(Patient patient, Map<String, Object> otherDataPoints) throws MpiClientException;
+	public List<MpiPatient> searchPatient(Patient patient) throws MpiClientException;
 
 	/**
-	 * Searches for patients with the specified patient identity string
+	 * Searches for patients with the specified patient identity string 
 	 */
 	public MpiPatient getPatient(String identifier, String assigningAuthority) throws MpiClientException;
 	
@@ -87,15 +82,15 @@ public interface MpiClientService extends OpenmrsService {
 	
 	/**
 	 * Export patient demographic record to the CR
-	 * @param patientExport
+	 * @param patient
 	 */
-	public void exportPatient(MpiPatientExport patientExport) throws MpiClientException;
+	public void exportPatient(Patient patient) throws MpiClientException;
 
 	/**
 	 * Export patient demographic record to the CR
 	 * @param patient
 	 */
-	public void updatePatient(MpiPatientExport patientExport) throws MpiClientException;
+	public void updatePatient(Patient patient) throws MpiClientException;
 
 	/**
 	 * Get the audit logger
