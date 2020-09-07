@@ -49,7 +49,7 @@ import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
-import org.hl7.fhir.r4.model.Patient.ContactComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
