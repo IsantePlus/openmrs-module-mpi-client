@@ -52,7 +52,7 @@ public class PatientSynchronizationAdvice implements AfterReturningAdvice {
 		}
 		else if(method.getName().equals("getPatient"))
 		{
-			PatientSyncWorker worker = new PatientSyncWorker(((Patient)returnValue).getUuid(), Context.getUserContext());
+			PatientSyncWorker worker = new PatientSyncWorker(((Patient)returnValue), Context.getUserContext());
 			worker.start();
 		}
 		else if(method.getName().equals("saveGlobalProperty"))

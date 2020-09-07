@@ -79,6 +79,20 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 			
 	}
 
+	@Override
+	public List<MpiPatient> searchPatient(Patient patient) throws MpiClientException {
+		if(MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+			return this.m_fhirService.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
+					patient.getBirthdateEstimated(), patient.getGender(), patient.getPersonAddress().getStateProvince(),
+					patient.getPersonAddress().getCityVillage(), patient.getPatientIdentifier(),
+					null, null, null);
+		else
+			return this.m_hl7Service.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
+					patient.getBirthdateEstimated(), patient.getGender(), patient.getPersonAddress().getStateProvince(),
+					patient.getPersonAddress().getCityVillage(), patient.getPatientIdentifier(),
+					null, null, null);
+	}
+
 	/**
 	 * Get patient using specified identifier and AA
 	 */
