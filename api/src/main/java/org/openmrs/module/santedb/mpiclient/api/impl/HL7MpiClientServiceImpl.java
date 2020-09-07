@@ -44,6 +44,7 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.openmrs.module.santedb.mpiclient.util.AuditUtil;
 import org.openmrs.module.santedb.mpiclient.util.MessageDispatchWorker;
 import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
@@ -382,7 +383,8 @@ public class HL7MpiClientServiceImpl
 		}
 		
 		// Now notify the MPI
-		this.exportPatient(importedPatient);
+		MpiPatientExport mpiPatientExport = new MpiPatientExport(importedPatient,null, null,null,null);
+		this.exportPatient(mpiPatientExport);
 		return importedPatient;
 	}
 	
@@ -391,7 +393,7 @@ public class HL7MpiClientServiceImpl
 	 * @throws MpiClientException 
 	 * @throws HL7Exception 
 	 */
-	public void exportPatient(Patient patient) throws MpiClientException {
+	public void exportPatient(MpiPatientExport patientExport) throws MpiClientException {
 		// TODO Auto-generated method stub
 		
 		Message admitMessage = null;
@@ -400,8 +402,8 @@ public class HL7MpiClientServiceImpl
 		try
 		{
 		
-			admitMessage = this.m_messageUtil.createAdmit(patient);
-			auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, true);
+			admitMessage = this.m_messageUtil.createAdmit(patientExport.getPatient());
+			auditMessage = AuditUtil.getInstance().createPatientAdmit(patientExport.getPatient(), this.m_configuration.getPixEndpoint(), admitMessage, true);
 			
 			if(this.m_configuration.getUseBackgroundThreads())
 			{
@@ -443,7 +445,7 @@ public class HL7MpiClientServiceImpl
 			e.printStackTrace();
 			log.error(e);
 			if(auditMessage != null)
-				auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, false);
+				auditMessage = AuditUtil.getInstance().createPatientAdmit(patientExport.getPatient(), this.m_configuration.getPixEndpoint(), admitMessage, false);
 
 			throw new MpiClientException(e);
 		}

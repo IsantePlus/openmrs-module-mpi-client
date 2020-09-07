@@ -48,32 +48,22 @@ import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseDatatype;
 import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Location;
-import org.hl7.fhir.r4.model.HumanName;
-import org.hl7.fhir.r4.model.Extension;
-import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.CodeableConcept;
-import org.hl7.fhir.r4.model.ContactPoint;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.Location;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
-import org.hl7.fhir.r4.model.Patient.ContactComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
-import org.openmrs.Concept;
+import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
-import org.openmrs.PersonAttribute;
-import org.openmrs.api.ConceptService;
-import org.openmrs.api.EncounterService;
-import org.openmrs.api.ObsService;
-import org.openmrs.api.context.Context;
 import org.openmrs.module.fhir2.api.translators.LocationTranslator;
-import org.openmrs.parameter.EncounterSearchCriteria;
-import org.openmrs.parameter.EncounterSearchCriteriaBuilder;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,7 +88,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	// Log
 	private static Log log = LogFactory.getLog(HL7MpiClientServiceImpl.class);
 	// Message utility
-	private FhirUtil m_messageUtil = FhirUtil.getInstance();
+	private FhirUtil mMessageUtil = FhirUtil.getInstance();
 
 	// Get health information exchange information
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
@@ -412,47 +402,36 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	 * Sends a patient to the MPI in FHIR format
 	 */
 	@Override
-	public void exportPatient(Patient patient) throws MpiClientException {
+	public void exportPatient(MpiPatientExport patientExport) throws MpiClientException {
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
 
+
 		try {
-			admitMessage = patientTranslator.toFhirResource(patient);
+			admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
 
 			// TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
 			// Temporary URI identifier
-			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patient.getPatientIdentifier().getIdentifier());
-
-			//            Set the place of birth for the patient
-
-			//		TODO - Refactor this to incorporate subsequent exports after registration encounter - Look at the current visit instead??
-			org.openmrs.EncounterType registrationEncounterType = Context.getEncounterService().getEncounterTypeByUuid(this.m_configuration.getRegistrationEncounterUuid());
-			java.util.Collection<org.openmrs.EncounterType> encounterTypeList = new ArrayList<org.openmrs.EncounterType>() {{
-				add(registrationEncounterType);
-			}};
-			EncounterSearchCriteriaBuilder builder = new EncounterSearchCriteriaBuilder();
-			EncounterSearchCriteria encounterSearchCriteria = builder.setPatient(patient).setEncounterTypes(encounterTypeList).createEncounterSearchCriteria();
-			org.openmrs.Encounter registrationEncounter = Context.getEncounterService().getEncounters(encounterSearchCriteria).get(0);
+			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getPatientIdentifier().getIdentifier());
 
 
-			Location patientBirthPlace = translateBirthPlace(patient);
-			Extension birthplace = new Extension();
-			birthplace.setUrl("http://hl7.org/fhir/StructureDefinition/birthPlace");
-			birthplace.setValue((IBaseDatatype) patientBirthPlace);
-			admitMessage.addExtension(birthplace);
+//			Set the patient place of birth
+			Extension birthPlaceExtension = new Extension();
+			birthPlaceExtension.setUrl("http://hl7.org/fhir/StructureDefinition/birthPlace");
+			Location  birthPlaceResource = locationTranslator.toFhirResource(patientExport.getBirthPlace());
+			birthPlaceExtension.setValue((IBaseDatatype) birthPlaceResource);
+			admitMessage.addExtension(birthPlaceExtension);
 
-//            Set mother's name
-			PersonAttribute mothersNameAttribute = patient.getAttribute(this.m_configuration.getMothersAttributeName());
+//			Set mother's name
 			Extension mothersMaidenName = new Extension();
 			mothersMaidenName.setUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
-			String value = mothersNameAttribute.getValue();
-			mothersMaidenName.setValue(new StringType(value));
+			mothersMaidenName.setValue(new StringType(patientExport.getMothersMaidenName().getValue()));
 			admitMessage.addExtension(mothersMaidenName);
 
-			java.util.Set<org.openmrs.Obs> patientObs = registrationEncounter.getObsAtTopLevel(false);
-			for (org.openmrs.Obs po : patientObs) {
+
+			for (Obs po : patientExport.getPatientObs()) {
 				if (po.isObsGrouping()) {
 					try {
-						admitMessage.addContact(translatePatientContact(po));
+						admitMessage.addContact(mMessageUtil.translatePatientContact(po));
 
 					} catch (Exception e) {
 						log.error("Error while processing patient contacts", e);
@@ -461,6 +440,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
 				}
 			}
+
 
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.create().resource(admitMessage).execute();
@@ -521,69 +501,5 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.applicationContext = applicationContext;
-	}
-
-
-	/**
-	 * @param patient The OpenMRS patient whose location of birth is to be included
-	 * @return The FHIR2 Location resource associated with the patients place of birth
-	 * @summary Parse an iSantePlus place of birth @Location to a FHIR location extension
-	 */
-	private Location translateBirthPlace(org.openmrs.Patient patient) {
-		ObsService obsService = Context.getObsService();
-		Concept registrationConcept = Context.getConceptService().getConceptByUuid(this.m_configuration.registrationConceptUuid());
-		org.openmrs.Location location = obsService.getObservationsByPersonAndConcept(patient, registrationConcept).get(0).getLocation();
-		return locationTranslator.toFhirResource(location);
-	}
-
-	/**
-	 * @return The FHIR2 Location resource associated with the patients place of birth
-	 * @summary Parse an iSantePlus place of birth @Location to a FHIR location extension
-	 */
-	private ContactComponent translatePatientContact(org.openmrs.Obs patientOb) {
-		java.util.Set<org.openmrs.Obs> contactMembers = patientOb.getGroupMembers(false);
-
-//		Add patient contact -
-		ContactComponent contactComponent = new ContactComponent();
-
-		for (org.openmrs.Obs cm : contactMembers) {
-//			TODO move to global peroperties and use UUID instead
-			if (cm.getConcept().getConceptId() == 163258) {
-//				Process contact name
-				HumanName contactName = new HumanName();
-				String[] names = cm.getValueText().split(" ");
-
-				if (names.length > 1) {
-					contactName.setFamily(names[1]);
-					List<StringType> ns = new ArrayList<StringType>() {{
-						add(new StringType(names[0]));
-					}};
-					contactName.setGiven(ns);
-				} else if (names.length == 1) {
-					contactName.setFamily(names[0]);
-				}
-				contactComponent.setName(contactName);
-			} else if (cm.getConcept().getConceptId() == 159635) {
-//				Process contact's phone number
-				ContactPoint telco = new ContactPoint();
-				telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
-				telco.setValue(cm.getValueText());
-				List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
-					add(telco);
-				}};
-				contactPoints.add(telco);
-				contactComponent.setTelecom(contactPoints);
-			} else if (cm.getConcept().getConceptId() == 164352) {
-//            	Process relationship to patient
-				CodeableConcept concept = new CodeableConcept();
-				concept.setText(cm.getValueCodedName().getName());
-				contactComponent.addRelationship(new CodeableConcept());
-
-			} else if (cm.getConcept().getConceptId() == 164958) {
-//            	Wrong mapping for address
-
-			}
-		}
-		return contactComponent;
 	}
 }

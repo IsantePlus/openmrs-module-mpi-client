@@ -25,6 +25,7 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -82,9 +83,9 @@ public interface MpiClientService extends OpenmrsService {
 	
 	/**
 	 * Export patient demographic record to the CR
-	 * @param patient
+	 * @param patientExport
 	 */
-	public void exportPatient(Patient patient) throws MpiClientException;
+	public void exportPatient(MpiPatientExport patientExport) throws MpiClientException;
 
 	/**
 	 * Export patient demographic record to the CR
