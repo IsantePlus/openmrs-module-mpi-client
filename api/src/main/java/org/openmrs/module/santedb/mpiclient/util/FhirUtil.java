@@ -498,7 +498,6 @@ public class FhirUtil {
 
 		return patient;
 	}
-
 	private Obs translateAddressComponent(Address birthPlaceAddress) throws ParseException {
 
 		ConceptService conceptService = Context.getConceptService();
@@ -745,5 +744,4 @@ public class FhirUtil {
 
 		}
 	}
-
 }
