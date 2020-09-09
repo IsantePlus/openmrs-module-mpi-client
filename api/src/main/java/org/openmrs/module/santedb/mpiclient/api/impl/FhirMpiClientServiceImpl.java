@@ -404,8 +404,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	@Override
 	public void exportPatient(MpiPatientExport patientExport) throws MpiClientException {
 		org.hl7.fhir.r4.model.Patient admitMessage = null;
-
-
 		try {
 			admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
 
@@ -414,12 +412,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getPatientIdentifier().getIdentifier());
 
 
-//			Set the patient place of birth
-			Extension birthPlaceExtension = new Extension();
-			birthPlaceExtension.setUrl("http://hl7.org/fhir/StructureDefinition/birthPlace");
-			Location  birthPlaceResource = locationTranslator.toFhirResource(patientExport.getBirthPlace());
-			birthPlaceExtension.setValue((IBaseDatatype) birthPlaceResource);
-			admitMessage.addExtension(birthPlaceExtension);
+
 
 //			Set mother's name
 			Extension mothersMaidenName = new Extension();
@@ -428,18 +421,14 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			admitMessage.addExtension(mothersMaidenName);
 
 
-			for (Obs po : patientExport.getPatientObs()) {
-				if (po.isObsGrouping()) {
-					try {
-						admitMessage.addContact(mMessageUtil.translatePatientContact(po));
-
-					} catch (Exception e) {
-						log.error("Error while processing patient contacts", e);
-					}
+			//			Set the patient place of birth
+			Extension birthPlaceExtension = new Extension();
+			birthPlaceExtension.setUrl("http://hl7.org/fhir/StructureDefinition/birthPlace");
+			Location  birthPlaceResource = locationTranslator.toFhirResource(patientExport.getBirthPlace());
+			birthPlaceExtension.setValue((IBaseDatatype) birthPlaceResource);
+			admitMessage.addExtension(birthPlaceExtension);
 
 
-				}
-			}
 
 
 			IGenericClient client = this.getClient(false);
