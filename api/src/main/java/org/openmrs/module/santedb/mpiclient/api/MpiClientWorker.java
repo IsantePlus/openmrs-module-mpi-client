@@ -38,7 +38,7 @@ public interface MpiClientWorker  {
 	 * @return
 	 */
 	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate, String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,  PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException;
-	
+
 	/**
 	 * Searches for patients with the specified patient identity string 
 	 */
