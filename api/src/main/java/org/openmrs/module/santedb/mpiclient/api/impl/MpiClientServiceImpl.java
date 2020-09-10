@@ -67,7 +67,7 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
      * @summary Creates a new instance of the MPI Client Service Implementation
      */
     public MpiClientServiceImpl() {
-        // this.m_fhirService = new FhirMpiClientServiceImpl(); // TODO: FHIR implementation
+        this.m_fhirService = new FhirMpiClientServiceImpl();
         this.m_hl7Service = new HL7MpiClientServiceImpl();
     }
 
@@ -87,42 +87,18 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
 
     @Override
     public List<MpiPatient> searchPatient(Patient patient) throws MpiClientException {
-        log.error("Searching up patient details for : " + patient.getGivenName());
-
-        if (patient != null) {
-            if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir")) {
-                List<MpiPatient> mpiPatients =
-                        this.m_fhirService.searchPatient(
-//                                patient.getFamilyName(),
-                                null,
-                                patient.getGivenName(),
-//                                patient.getBirthDateTime(),
-                                null,
-//                                patient.getBirthdateEstimated(),
-                                true,
-//                                patient.getGender(),
-                                null,
-//                                patient.getPersonAddress() != null ? patient.getPersonAddress().getStateProvince() : null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null);
-                return mpiPatients;
-            } else {
-                List<MpiPatient> mpiPatients = this.m_hl7Service.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
-                        patient.getBirthdateEstimated(), patient.getGender(), patient.getPersonAddress().getStateProvince(),
-                        patient.getPersonAddress().getCityVillage(), patient.getPatientIdentifier(),
-                        null, null, null);
-                return mpiPatients;
-            }
-        } else {
-            log.error("Cannot run search based on a null value");
-            return new ArrayList<>();
-        }
-
-
+        if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+            return this.m_fhirService.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
+                    patient.getBirthdateEstimated(), patient.getGender(),
+                    patient.getPersonAddress()!= null?patient.getPersonAddress().getStateProvince():null,
+                    patient.getPersonAddress()!=null?patient.getPersonAddress().getCityVillage():null, patient.getPatientIdentifier(),
+                    null, null, null);
+        else
+            return this.m_hl7Service.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
+                    patient.getBirthdateEstimated(), patient.getGender(),
+                    patient.getPersonAddress()!= null?patient.getPersonAddress().getStateProvince():null,
+                    patient.getPersonAddress()!=null?patient.getPersonAddress().getCityVillage():null, patient.getPatientIdentifier(),
+                    null, null, null);
     }
 
     /**
