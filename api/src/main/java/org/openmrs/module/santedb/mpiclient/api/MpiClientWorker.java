@@ -56,8 +56,7 @@ public interface MpiClientWorker  {
 
 	/**
 	 * Import the specified patient data from the PDQ supplier
-	 * @param identifier
-	 * @param asigningAuthority
+	 * @param patient
 	 * @return
 	 * @throws MpiClientException
 	 */
