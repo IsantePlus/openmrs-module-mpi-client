@@ -400,7 +400,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
 			// TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
 			// Temporary URI identifier
-			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patient.getPatientIdentifier().getIdentifier());
+			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patient.getUuid());
 
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.create().resource(admitMessage).execute();
