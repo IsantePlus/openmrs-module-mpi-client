@@ -47,6 +47,7 @@ import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
 import org.openmrs.Obs;
