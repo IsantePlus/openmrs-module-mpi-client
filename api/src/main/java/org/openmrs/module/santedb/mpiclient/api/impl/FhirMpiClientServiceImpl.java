@@ -46,10 +46,6 @@ import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
-import org.hl7.fhir.r4.model.HumanName;
-import org.hl7.fhir.r4.model.Extension;
-import org.hl7.fhir.r4.model.Location;
-import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
 import org.openmrs.Obs;
@@ -395,54 +391,10 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
         try {
             admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
-
-			// TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
-			// Temporary URI identifier
-            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getPatientIdentifier().getIdentifier());
-
-//            Set the place of birth for the patient
-
-			//		TODO - Refactor this to incorporate subsequent exports after registration encounter - Look at the current visit instead??
-			org.openmrs.EncounterType registrationEncounterType = Context.getEncounterService().getEncounterTypeByUuid(this.m_configuration.getRegistrationEncounterUuid());
-			Collection<org.openmrs.EncounterType> encounterTypeList = new ArrayList<org.openmrs.EncounterType>() {{
-				add(registrationEncounterType);
-			}};
-			EncounterSearchCriteriaBuilder builder = new EncounterSearchCriteriaBuilder();
-			EncounterSearchCriteria encounterSearchCriteria = builder.setPatient(patient).setEncounterTypes(encounterTypeList).createEncounterSearchCriteria();
-			org.openmrs.Encounter registrationEncounter = Context.getEncounterService().getEncounters(encounterSearchCriteria).get(0);
-
-
-			Location patientBirthPlace = translateBirthPlace(patient);
-			Extension birthplace = new Extension();
-			birthplace.setUrl("http://hl7.org/fhir/StructureDefinition/birthPlace");
-			birthplace.setValue((IBaseDatatype) patientBirthPlace);
-			admitMessage.addExtension(birthplace);
-
-//            Set mother's name
-			PersonAttribute mothersNameAttribute = patient.getAttribute(this.m_configuration.getMothersAttributeName());
-			Extension mothersMaidenName = new Extension();
-			mothersMaidenName.setUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
-			String value = mothersNameAttribute.getValue();
-			mothersMaidenName.setValue(new StringType(value));
-			admitMessage.addExtension(mothersMaidenName);
-
-			//            Set the place of birth for the patient
-
-
-////			Set mother's name
-//            Extension mothersMaidenName = new Extension();
-//            mothersMaidenName.setUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
-//            mothersMaidenName.setValue(new StringType(patientExport.getMothersMaidenName().getValue()));
-//            admitMessage.addExtension(mothersMaidenName);
-//
-//
-//            //			Set the patient place of birth
-//            Extension birthPlaceExtension = new Extension();
-//            birthPlaceExtension.setUrl("http://hl7.org/fhir/StructureDefinition/birthPlace");
-//            Location birthPlaceResource = locationTranslator.toFhirResource(patientExport.getBirthPlace());
-//            birthPlaceExtension.setValue((IBaseDatatype) birthPlaceResource);
-//            admitMessage.addExtension(birthPlaceExtension);
-
+            admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
+            // TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
+            // Temporary URI identifier
+            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getUuid());
 
 
             //            Set mother's name
