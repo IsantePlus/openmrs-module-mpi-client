@@ -48,6 +48,7 @@ import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
 import org.openmrs.Patient;
@@ -401,6 +402,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			// TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
 			// Temporary URI identifier
 			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patient.getUuid());
+			admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
 
 			IGenericClient client = this.getClient(false);
 			MethodOutcome result = client.create().resource(admitMessage).execute();
