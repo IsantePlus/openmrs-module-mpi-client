@@ -23,6 +23,7 @@ import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 
 /**
  * Implementation of the HealthInformationExchangeService
@@ -37,7 +38,7 @@ public interface MpiClientWorker  {
 	 * @return
 	 */
 	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate, String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,  PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException;
-	
+
 	/**
 	 * Searches for patients with the specified patient identity string 
 	 */
@@ -62,13 +63,13 @@ public interface MpiClientWorker  {
 	 * Export patient demographic record to the CR
 	 * @param patient
 	 */
-	public void exportPatient(Patient patient) throws MpiClientException;
+	public void exportPatient(MpiPatientExport patient) throws MpiClientException;
 
 	/**
 	 * Export patient demographic record to the CR
 	 * @param patient
 	 */
-	public void updatePatient(Patient patient) throws MpiClientException;
+	public void updatePatient(MpiPatientExport patient) throws MpiClientException;
 
 	/**
 	 * Get the audit logger

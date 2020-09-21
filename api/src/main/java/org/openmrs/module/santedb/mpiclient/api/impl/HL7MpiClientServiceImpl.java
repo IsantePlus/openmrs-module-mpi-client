@@ -44,6 +44,7 @@ import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration
 import org.openmrs.module.santedb.mpiclient.dao.MpiClientDao;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.openmrs.module.santedb.mpiclient.util.AuditUtil;
 import org.openmrs.module.santedb.mpiclient.util.MessageDispatchWorker;
 import org.openmrs.module.santedb.mpiclient.util.MessageUtil;
@@ -93,13 +94,13 @@ public class HL7MpiClientServiceImpl
 	 */
 	public List<MpiPatient> searchPatient(String familyName, String givenName,
 			Date dateOfBirth, boolean fuzzyDate, String gender,
-			String stateOrRegion, 
+			String stateOrRegion,
 			String cityOrTownship,
 			PatientIdentifier identifier,
-			PatientIdentifier mothersIdentifier, 
+			PatientIdentifier mothersIdentifier,
 			String nextOfKinName,
 			String birthplace) throws MpiClientException {
-		
+
 		Map<String, String> queryParams = new HashMap<String, String>();
 		if(familyName != null && !familyName.isEmpty())
 			queryParams.put("@PID.5.1", familyName);
@@ -127,13 +128,13 @@ public class HL7MpiClientServiceImpl
 			queryParams.put("@PID.23", birthplace);
 		if(nextOfKinName != null && !nextOfKinName.isEmpty())
 			queryParams.put("@NK1.2.2.1", nextOfKinName);
-		
+
 		if(gender != null && !gender.isEmpty())
 			queryParams.put("@PID.8", gender);
 		if(identifier != null)
 		{
 			queryParams.put("@PID.3.1", identifier.getIdentifier());
-			
+
 			if(identifier.getIdentifierType() != null)
 			{
 				if(II.isRootOid(new II(identifier.getIdentifierType().getName())))
@@ -147,9 +148,9 @@ public class HL7MpiClientServiceImpl
 		}
 		if(mothersIdentifier != null)
 		{
-			
+
 			queryParams.put("@PID.21.1", mothersIdentifier.getIdentifier());
-			
+
 			if(mothersIdentifier.getIdentifierType() != null)
 			{
 				if(II.isRootOid(new II(mothersIdentifier.getIdentifierType().getName())))
@@ -169,21 +170,21 @@ public class HL7MpiClientServiceImpl
 		{
 			queryParams.put("@PID.11.3", cityOrTownship);
 		}
-			
+
 		AuditMessage auditMessage = null;
 		Message pdqRequest = null;
-		
+
 		// Send the message and construct the result set
 		try
 		{
 			pdqRequest = this.m_messageUtil.createPdqMessage(queryParams);
 			Message	response = this.m_messageUtil.sendMessage(pdqRequest, this.m_configuration.getPdqEndpoint(), this.m_configuration.getPdqPort());
-			
+
 			Terser terser = new Terser(response);
 			if(!terser.get("/MSA-1").endsWith("A"))
 				throw new MpiClientException(String.format("Error querying data :> %s", terser.get("/MSA-1")), response);
-			
-			
+
+
 			List<MpiPatient> retVal = this.m_messageUtil.interpretPIDSegments(response);
 			auditMessage = AuditUtil.getInstance().createPatientSearch(retVal, this.m_configuration.getPdqEndpoint(), (QBP_Q21)pdqRequest);
 			return retVal;
@@ -382,7 +383,8 @@ public class HL7MpiClientServiceImpl
 		}
 		
 		// Now notify the MPI
-		this.exportPatient(importedPatient);
+		MpiPatientExport mpiPatientExport = new MpiPatientExport(importedPatient,null, null,null,null);
+		this.exportPatient(mpiPatientExport);
 		return importedPatient;
 	}
 	
@@ -391,7 +393,7 @@ public class HL7MpiClientServiceImpl
 	 * @throws MpiClientException 
 	 * @throws HL7Exception 
 	 */
-	public void exportPatient(Patient patient) throws MpiClientException {
+	public void exportPatient(MpiPatientExport patientExport) throws MpiClientException {
 		// TODO Auto-generated method stub
 		
 		Message admitMessage = null;
@@ -400,8 +402,8 @@ public class HL7MpiClientServiceImpl
 		try
 		{
 		
-			admitMessage = this.m_messageUtil.createAdmit(patient);
-			auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, true);
+			admitMessage = this.m_messageUtil.createAdmit(patientExport.getPatient());
+			auditMessage = AuditUtil.getInstance().createPatientAdmit(patientExport.getPatient(), this.m_configuration.getPixEndpoint(), admitMessage, true);
 			
 			if(this.m_configuration.getUseBackgroundThreads())
 			{
@@ -443,7 +445,7 @@ public class HL7MpiClientServiceImpl
 			e.printStackTrace();
 			log.error(e);
 			if(auditMessage != null)
-				auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, false);
+				auditMessage = AuditUtil.getInstance().createPatientAdmit(patientExport.getPatient(), this.m_configuration.getPixEndpoint(), admitMessage, false);
 
 			throw new MpiClientException(e);
 		}
@@ -512,7 +514,7 @@ public class HL7MpiClientServiceImpl
 	 * Update the patient record
 	 * @see org.openmrs.module.santedb.mpiclient.api.MpiClientService#updatePatient(org.openmrs.Patient)
 	 */
-	public void updatePatient(Patient patient) throws MpiClientException {
+	public void updatePatient(MpiPatientExport patientExport) throws MpiClientException {
 		
 		// TODO Auto-generated method stub
 		AuditMessage auditMessage = null;
@@ -520,13 +522,13 @@ public class HL7MpiClientServiceImpl
 		Message admitMessage = null;
 		try
 		{
-			admitMessage = this.m_messageUtil.createUpdate(patient);
+			admitMessage = this.m_messageUtil.createUpdate(patientExport.getPatient());
 			Message	response = this.m_messageUtil.sendMessage(admitMessage, this.m_configuration.getPixEndpoint(), this.m_configuration.getPixPort());
 			
 			Terser terser = new Terser(response);
 			if(!terser.get("/MSA-1").endsWith("A"))
 				throw new MpiClientException(String.format("Error querying data :> %s", terser.get("/MSA-1")), response);
-			auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, true);
+			auditMessage = AuditUtil.getInstance().createPatientAdmit(patientExport.getPatient(), this.m_configuration.getPixEndpoint(), admitMessage, true);
 
 
 		}
@@ -546,7 +548,7 @@ public class HL7MpiClientServiceImpl
 		{
 			log.error(e);
 			if(auditMessage != null)
-				auditMessage = AuditUtil.getInstance().createPatientAdmit(patient, this.m_configuration.getPixEndpoint(), admitMessage, false);
+				auditMessage = AuditUtil.getInstance().createPatientAdmit(patientExport.getPatient(), this.m_configuration.getPixEndpoint(), admitMessage, false);
 
 			throw new MpiClientException(e);
 		}
