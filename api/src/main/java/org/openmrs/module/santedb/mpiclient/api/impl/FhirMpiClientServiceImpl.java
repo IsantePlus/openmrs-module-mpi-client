@@ -33,6 +33,7 @@ import ca.uhn.fhir.rest.gclient.IQuery;
 import com.google.common.io.CharStreams;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -194,7 +195,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
     @Override
     public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
                                           String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,
-                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException {
+                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace,
+                                          Map<String, Object> otherDataPoints) throws MpiClientException {
 
         IQuery<IBaseBundle> query = this.getClient(true).search().forResource("Patient");
 
@@ -222,7 +224,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         if (gender != null && !gender.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.GENDER.exactly().code(gender));
 
-        if (patientIdentifier != null) {
+//        if (patientIdentifier != null) {
 //            TODO uncomment once the identifier domain functionality is enforced at the MPI
 //            if (patientIdentifier.getIdentifierType() != null) {
 //                String authority = this.m_configuration.getLocalPatientIdentifierTypeMap()
@@ -234,10 +236,23 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 //                query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
 //                        .systemAndIdentifier(patientIdentifier.getIdentifier(), authority));
 //            } else
-                query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
-                        .identifier(patientIdentifier.getIdentifier()));
+//                query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
+//                        .identifier(patientIdentifier.getIdentifier()));
+//
+//        }
 
+        String localBiometricSubjectId = (String) otherDataPoints.get("localBiometricSubjectId");
+        String nationalBiometricSubjectId = (String) otherDataPoints.get("nationalBiometricSubjectId");
+
+        if (StringUtils.isNotBlank(localBiometricSubjectId)) {
+            query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
+                    .systemAndIdentifier(localBiometricSubjectId, "Biometrics Reference Code"));
         }
+        if (StringUtils.isNotBlank(nationalBiometricSubjectId)) {
+            query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
+                    .systemAndIdentifier(nationalBiometricSubjectId, "Biometrics National Reference Code"));
+        }
+
 
         if (stateOrRegion != null && !stateOrRegion.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_STATE.contains().value(stateOrRegion));
@@ -273,6 +288,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
         // Send the message and construct the result set
         try {
+
             Bundle results = this
                     .getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
 //                            .exactly().systemAndIdentifier(assigningAuthority, identifier))
@@ -470,7 +486,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         Address fhirAddress = new Address();
         fhirAddress.setUse(Address.AddressUse.HOME);
         obs.getGroupMembers().forEach(member -> {
-
             switch (member.getConcept().getConceptId()){
                 case 165197: {
 //                    Province of residence
@@ -518,11 +533,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
         Address address = parseAddress(patientOb);
         contactComponent.setAddress(address);
-
-        Reference reference = new Reference();
-        reference.setDisplay(patientOb.getConcept().getName().getName());
-        contactComponent.setOrganization(reference);
-
+        contactComponent.setProperty("type",new StringType(patientOb.getConcept().getName().getName()));
 
         for (org.openmrs.Obs cm : contactMembers) {
             if (cm.getConcept().getConceptId() == 163258) {
@@ -546,8 +557,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                 telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
                 telco.setValue(cm.getValueText());
                 telco.setUse(ContactPoint.ContactPointUse.MOBILE);
-                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>();
-                contactPoints.add(telco);
+                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
+                    add(telco);
+                }};
                 contactComponent.setTelecom(contactPoints);
             } else if (cm.getConcept().getConceptId() == 164352) {
 //            	Process relationship to patient
