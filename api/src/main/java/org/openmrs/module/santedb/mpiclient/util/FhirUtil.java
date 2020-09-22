@@ -20,23 +20,20 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.DataTypeException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hl7.fhir.r4.model.Address;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Address.AddressUse;
-import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.CodeableConcept;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
-import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.HumanName.NameUse;
-import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Patient.ContactComponent;
 import org.openmrs.Patient;
+import org.openmrs.Obs;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.PersonAddress;
@@ -446,4 +443,49 @@ public class FhirUtil {
 
 		return patient;
 	}
+
+    public ContactComponent translatePatientContact(Obs patientOb) {
+//		Process patient contact -
+        ContactComponent contactComponent = new ContactComponent();
+        Set<Obs> contactMembers = patientOb.getGroupMembers(false);
+        for (Obs cm : contactMembers) {
+//			TODO move to global peroperties and use UUID instead
+            if (cm.getConcept().getConceptId() == 163258) {
+//				Process contact name
+                HumanName contactName = new HumanName();
+                String[] names = cm.getValueText().split(" ");
+
+                if (names.length > 1) {
+                    contactName.setFamily(names[1]);
+                    List<StringType> ns = new ArrayList<StringType>() {{
+                        add(new StringType(names[0]));
+                    }};
+                    contactName.setGiven(ns);
+                } else if (names.length == 1) {
+                    contactName.setFamily(names[0]);
+                }
+                contactComponent.setName(contactName);
+            } else if (cm.getConcept().getConceptId() == 159635) {
+//				Process contact's phone number
+                ContactPoint telco = new ContactPoint();
+                telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
+                telco.setValue(cm.getValueText());
+                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
+                    add(telco);
+                }};
+                contactPoints.add(telco);
+                contactComponent.setTelecom(contactPoints);
+            } else if (cm.getConcept().getConceptId() == 164352) {
+//            	Process relationship to patient
+                CodeableConcept concept = new CodeableConcept();
+                concept.setText(cm.getValueCodedName().getName());
+                contactComponent.addRelationship(new CodeableConcept());
+
+            } else if (cm.getConcept().getConceptId() == 164958) {
+//            	Wrong mapping for address
+
+            }
+        }
+        return contactComponent;
+    }
 }

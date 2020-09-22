@@ -25,6 +25,7 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -41,7 +42,14 @@ public interface MpiClientService extends OpenmrsService {
 	 * @return
 	 */
 	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate, String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,  PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException;
-	
+
+	/**
+	 * Searches the PDQ supplier for patients matching the specified search patient and returns patients matching the supplied object
+	 * @param patient - OpenMRS patient to find matches for
+	 * @return Wrapper list containing OpenMRS patients
+	 */
+	public List<MpiPatient> searchPatient(Patient patient) throws MpiClientException;
+
 	/**
 	 * Searches for patients with the specified patient identity string 
 	 */
@@ -75,9 +83,9 @@ public interface MpiClientService extends OpenmrsService {
 	
 	/**
 	 * Export patient demographic record to the CR
-	 * @param patient
+	 * @param patientExport
 	 */
-	public void exportPatient(Patient patient) throws MpiClientException;
+	public void exportPatient(MpiPatientExport patientExport) throws MpiClientException;
 
 	/**
 	 * Export patient demographic record to the CR

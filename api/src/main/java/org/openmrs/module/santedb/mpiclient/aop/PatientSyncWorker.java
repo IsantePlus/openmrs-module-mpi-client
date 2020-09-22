@@ -41,14 +41,14 @@ public class PatientSyncWorker extends Thread {
 	private final MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 	private final UserContext m_userContext;
 	
-	private String m_patientId;
+	private Patient m_patient;
 	
 	/**
 	 * Create a new patient update worker
 	 * @param patient
 	 */
-	public PatientSyncWorker(String patientId, UserContext ctx ) {
-		this.m_patientId = patientId;
+	public PatientSyncWorker(Patient patient, UserContext ctx) {
+		this.m_patient = patient;
 		this.m_userContext = ctx;
 	}
 	
@@ -57,24 +57,23 @@ public class PatientSyncWorker extends Thread {
 	 */
 	@Override
 	public void run() {
-		log.info("Sending update to the MPI for new patient data...");
+		log.info("Running the patient sync process...");
 		try
 		{
 			// Make sure we only XREF once
 			synchronized (s_xref) {
-				if(s_xref.contains(this.m_patientId))
+				if(s_xref.contains(this.m_patient.getUuid()))
 				{
-					log.warn(String.format("Patient %s is already being cross referenced", this.m_patientId));
+					log.warn(String.format("Patient %s is already being cross referenced", this.m_patient.getUuid()));
 					return;
 				}
 				else 
-						s_xref.add(this.m_patientId);
+						s_xref.add(this.m_patient.getUuid());
 			}
 			
 			Context.openSession();
 			Context.setUserContext(this.m_userContext);
 			MpiClientService hieService = Context.getService(MpiClientService.class);
-			Patient patient = Context.getPatientService().getPatientByUuid(this.m_patientId);
 			// Grab the national health ID for the patient
 			if(this.m_configuration.getAutomaticCrossReferenceDomains() != null) {
 				
@@ -88,7 +87,7 @@ public class PatientSyncWorker extends Thread {
 				
 				for(String xrefDomain : autoXrefDomains) {
 					
-					log.info(String.format("Will XREF %s with %s", this.m_patientId, xrefDomain));
+					log.info(String.format("Will XREF %s with %s", this.m_patient.getUuid(), xrefDomain));
 					
 					PatientIdentifierType pit = null;
 					for(String key : identifierMaps.keySet())
@@ -100,8 +99,8 @@ public class PatientSyncWorker extends Thread {
 							break;
 						}
 					
-					if(pit != null && patient.getPatientIdentifier(pit) == null) {
-						PatientIdentifier pid = hieService.resolvePatientIdentifier(patient, xrefDomain);
+					if(pit != null && this.m_patient.getPatientIdentifier(pit) == null) {
+						PatientIdentifier pid = hieService.resolvePatientIdentifier(this.m_patient, xrefDomain);
 						List<PatientIdentifierType> pitList = new ArrayList<PatientIdentifierType>();
 						pitList.add(pit);
 
@@ -109,12 +108,12 @@ public class PatientSyncWorker extends Thread {
 						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pitList, null, null, null).size() != 0)
 							log.warn(String.format("Identifier %s already exists", pid.getIdentifier()));
 						else if(pid != null) {
-							pid.setPatient(patient);
+							pid.setPatient(this.m_patient);
 							Context.getPatientService().savePatientIdentifier(pid);
 						}
 						else 
 						{
-							log.info(String.format("MPI does not have an ID for patient %s in domain %s", patient.getId(), xrefDomain));
+							log.info(String.format("MPI does not have an ID for patient %s in domain %s", this.m_patient.getId(), xrefDomain));
 						}
 					}
 					else if(pit == null)
@@ -130,7 +129,7 @@ public class PatientSyncWorker extends Thread {
 		}		
 		finally {
 			synchronized (s_xref) {
-				s_xref.remove(this.m_patientId);
+				s_xref.remove(this.m_patient.getUuid());
 			}
 			
 			Context.closeSession();
