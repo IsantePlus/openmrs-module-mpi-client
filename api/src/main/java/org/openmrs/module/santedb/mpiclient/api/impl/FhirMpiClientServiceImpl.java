@@ -20,7 +20,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -45,19 +49,16 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
-import org.hl7.fhir.instance.model.api.IBaseDatatype;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.HumanName;
+import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
-import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
-import org.openmrs.PersonAttribute;
 import org.openmrs.module.fhir2.api.translators.LocationTranslator;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
-import org.openmrs.module.fhir2.api.translators.PersonNameTranslator;
 import org.openmrs.module.fhir2.api.translators.impl.GenderTranslatorImpl;
 import org.openmrs.module.fhir2.api.translators.impl.PatientIdentifierTranslatorImpl;
 import org.openmrs.module.fhir2.api.translators.impl.PatientTranslatorImpl;
@@ -471,12 +472,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         org.hl7.fhir.r4.model.Patient admitMessage = null;
         try {
             admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
-            admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
 
             // TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
             // Temporary URI identifier
-			admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getUuid());
-			admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
+            admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
+            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getUuid());
 
             IGenericClient client = this.getClient(false);
             MethodOutcome result = client.create().resource(admitMessage).execute();
