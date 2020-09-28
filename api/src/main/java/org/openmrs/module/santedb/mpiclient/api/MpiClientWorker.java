@@ -69,7 +69,7 @@ public interface MpiClientWorker  {
 	 * Export patient demographic record to the CR
 	 * @param patient
 	 */
-	public void updatePatient(Patient patient) throws MpiClientException;
+	public void updatePatient(MpiPatientExport patient) throws MpiClientException;
 
 	/**
 	 * Get the audit logger

@@ -1,13 +1,13 @@
 /**
  * Portions Copyright 2015-2018 Mohawk College of Applied Arts and Technology
  * Portions Copyright (c) 2014-2020 Fyfe Software Inc.
- * <p>
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License. You may
  * obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -20,11 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.EncodingEnum;
@@ -37,7 +33,6 @@ import ca.uhn.fhir.rest.gclient.IQuery;
 import com.google.common.io.CharStreams;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import org.apache.commons.lang3.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
@@ -47,22 +42,16 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.dcm4che3.net.audit.AuditLogger;
-import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
-import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
-import org.hl7.fhir.r4.model.HumanName;
-import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
+import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
-import org.openmrs.module.fhir2.api.translators.LocationTranslator;
+import org.openmrs.PersonAttribute;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
-import org.openmrs.module.fhir2.api.translators.impl.GenderTranslatorImpl;
-import org.openmrs.module.fhir2.api.translators.impl.PatientIdentifierTranslatorImpl;
-import org.openmrs.module.fhir2.api.translators.impl.PatientTranslatorImpl;
-import org.openmrs.module.fhir2.api.translators.impl.PersonNameTranslatorImpl;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
@@ -80,6 +69,7 @@ import org.springframework.stereotype.Component;
  * MPI Client Service Implementation using FHIR
  *
  * @author fyfej
+ *
  */
 @Component
 public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationContextAware {
@@ -91,31 +81,24 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
     // Log
     private static Log log = LogFactory.getLog(HL7MpiClientServiceImpl.class);
     // Message utility
-    private FhirUtil mMessageUtil = FhirUtil.getInstance();
+    private FhirUtil fhirUtil = FhirUtil.getInstance();
 
     // Get health information exchange information
     private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
     private ApplicationContext applicationContext;
-
-    @Autowired
-    @Qualifier("fhirR4")
-    private FhirContext ctx;
-
     @Autowired
     private PatientTranslator patientTranslator;
-
-    @Autowired
-    private LocationTranslator locationTranslator;
 
     /**
      * Get the client as configured in this copy of the OMOD
      */
     // TODO: use existing FHIR context
+
     private IGenericClient getClient(boolean isSearch) throws MpiClientException {
         FhirContext ctx = FhirContext.forR4();
-
-        if (null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty()) {
+        if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
+        {
             String[] proxyData = this.m_configuration.getProxy().split(":");
             ctx.getRestfulClientFactory().setProxy(proxyData[0], Integer.parseInt(proxyData[1]));
         }
@@ -198,7 +181,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             }
         }
         // Basic Auth
-        else if ("basic".equals(this.m_configuration.getAuthenticationMode())) {
+        else if("basic".equals(this.m_configuration.getAuthenticationMode())) {
             client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
         }
         return client;
@@ -212,33 +195,32 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                                           String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,
                                           PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException {
 
-        log.error("in Search patient method");
         IQuery<IBaseBundle> query = this.getClient(true).search().forResource("Patient");
 
         if (familyName != null && !familyName.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.FAMILY.contains().value(familyName));
         if (givenName != null && !givenName.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.GIVEN.contains().value(givenName));
-//		if (dateOfBirth != null) {
-//			if (fuzzyDate) {
-//				if (this.m_configuration.getPdqDateFuzz() == 0) {
-//					query = query.where(
-//							org.hl7.fhir.r4.model.Patient.BIRTHDATE.after().day(new Date(dateOfBirth.getYear(), 0, 1)));
-//					query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.before()
-//							.day(new Date(dateOfBirth.getYear(), 11, 31)));
-//				} else {
-//					query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.after()
-//							.day(new Date(dateOfBirth.getYear() - this.m_configuration.getPdqDateFuzz(), 0, 1)));
-//					query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.before()
-//							.day(new Date(dateOfBirth.getYear() + this.m_configuration.getPdqDateFuzz(), 11, 31)));
-//				}
-//			} else
-//				query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.exactly().day(dateOfBirth));
-//		}
+        if (dateOfBirth != null) {
+            if (fuzzyDate) {
+                if (this.m_configuration.getPdqDateFuzz() == 0) {
+                    query = query.where(
+                            org.hl7.fhir.r4.model.Patient.BIRTHDATE.after().day(new Date(dateOfBirth.getYear(), 0, 1)));
+                    query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.before()
+                            .day(new Date(dateOfBirth.getYear(), 11, 31)));
+                } else {
+                    query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.after()
+                            .day(new Date(dateOfBirth.getYear() - this.m_configuration.getPdqDateFuzz(), 0, 1)));
+                    query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.before()
+                            .day(new Date(dateOfBirth.getYear() + this.m_configuration.getPdqDateFuzz(), 11, 31)));
+                }
+            } else
+                query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.exactly().day(dateOfBirth));
+        }
 
         if (gender != null && !gender.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.GENDER.exactly().code(gender));
-//
+
         if (patientIdentifier != null) {
             if (patientIdentifier.getIdentifierType() != null) {
                 String authority = this.m_configuration.getLocalPatientIdentifierTypeMap()
@@ -255,35 +237,23 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
         }
 
-//		if (stateOrRegion != null && !stateOrRegion.isEmpty())
-//			query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_STATE.contains().value(stateOrRegion));
-//		if (cityOrTownship != null && !cityOrTownship.isEmpty())
-//			query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_CITY.contains().value(cityOrTownship));
+        if (stateOrRegion != null && !stateOrRegion.isEmpty())
+            query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_STATE.contains().value(stateOrRegion));
+        if (cityOrTownship != null && !cityOrTownship.isEmpty())
+            query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_CITY.contains().value(cityOrTownship));
 
         // Send the message and construct the result set
         try {
 
             Bundle results = query.returnBundle(Bundle.class).execute();
-            log.error("The Bundle has been returned here....................");
-            log.error(results.toString());
-
 
             List<MpiPatient> retVal = new ArrayList<MpiPatient>();
             for (BundleEntryComponent result : results.getEntry()) {
                 org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
+
                 // TODO: Create module-specific translator: Fhir.Patient <--> MpiPatient
-                log.error("Create module-specific translator: Fhir.Patient <--> MpiPatient");
-                if (patientTranslator == null) {
-                    log.error("Patient Translator has not been formed here....forming one now");
-                    patientTranslator = new PatientTranslatorImpl();
-                    log.error(patientTranslator != null ? "Patient Translator already been formed " : "Patient Translator is still null");
-                }
-
-                //                    Patient patient = patientTranslator.toOpenmrsType(pat);
-                MpiPatient patient = toOpenmrsType(pat);
-                log.error("Formed a patient with the details: =>" + patient.toString() + " : " + patient.getFamilyName() + " : " + patient.getGivenName());
-                retVal.add(patient);
-
+                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
+                retVal.add(mpiPatient);
             }
             return retVal;
         } catch (Exception e) {
@@ -293,62 +263,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         } finally {
         }
     }
-
-
-    public MpiPatient toOpenmrsType(org.hl7.fhir.r4.model.Patient fhirPatient) {
-        Validate.notNull(fhirPatient, "The Patient object should not be null", new Object[0]);
-        return this.toOpenmrsType(new MpiPatient(), fhirPatient);
-    }
-
-    public MpiPatient toOpenmrsType(MpiPatient currentPatient, org.hl7.fhir.r4.model.Patient patient) {
-        Validate.notNull(currentPatient, "The existing Openmrs Patient object should not be null", new Object[0]);
-        Validate.notNull(patient, "The Patient object should not be null", new Object[0]);
-        currentPatient.setUuid(patient.getId());
-        currentPatient.setBirthdate(patient.getBirthDate());
-        if (patient.hasDeceased()) {
-            try {
-                patient.getDeceasedBooleanType();
-                currentPatient.setDead(patient.getDeceasedBooleanType().booleanValue());
-            } catch (FHIRException var6) {
-            }
-
-            try {
-                patient.getDeceasedDateTimeType();
-                currentPatient.setDead(true);
-                currentPatient.setDeathDate(patient.getDeceasedDateTimeType().getValue());
-            } catch (FHIRException var5) {
-            }
-        }
-
-        Iterator var2 = patient.getIdentifier().iterator();
-
-        while(var2.hasNext()) {
-            Identifier identifier = (Identifier)var2.next();
-            log.error("In identifier translation.....................................");
-            currentPatient.addIdentifier(new PatientIdentifierTranslatorImpl().toOpenmrsType(identifier));
-        }
-
-        Iterator var3 = patient.getName().iterator();
-//
-        while(var3.hasNext()) {
-            HumanName name = (HumanName)var3.next();
-            currentPatient.addName(new PersonNameTranslatorImpl().toOpenmrsType(name));
-        }
-
-        if (patient.hasGender()) {
-            currentPatient.setGender(new GenderTranslatorImpl().toOpenmrsType(patient.getGender()));
-        }
-
-//        -
-
-//        patient.getTelecom().stream().map((contactPoint) -> {
-//            return (PersonAttribute)this.telecomTranslator.toOpenmrsType(new PersonAttribute(), contactPoint);
-//        }).distinct().filter(Objects::nonNull).forEach(currentPatient::addAttribute);
-        return currentPatient;
-    }
-
-
-
 
     /**
      * Retrieves a specific patient from the MPI given their identifier
@@ -361,14 +275,14 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
             Bundle results = this
                     .getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
-                            .exactly().systemAndIdentifier(assigningAuthority, identifier))
+//                            .exactly().systemAndIdentifier(assigningAuthority, identifier))
+                            .exactly().identifier(identifier))
                     .count(1).returnBundle(Bundle.class).execute();
 
-            List<MpiPatient> retVal = new ArrayList<MpiPatient>();
             for (BundleEntryComponent result : results.getEntry()) {
-
                 org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-                return (MpiPatient) patientTranslator.toOpenmrsType(pat);
+                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
+                return mpiPatient;
             }
             return null; // no results
         } catch (Exception e) {
@@ -391,22 +305,26 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             String identifier = null, assigningAuthority = null;
             // Preferred correlation identifier
             if (!this.m_configuration.getPreferredCorrelationDomain().isEmpty()) {
-                for (PatientIdentifier pid : patient.getIdentifiers()) {
+                for(PatientIdentifier pid : patient.getIdentifiers())
+                {
                     String domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName());
-                    if (this.m_configuration.getPreferredCorrelationDomain().equals(domain)) {
+                    if(this.m_configuration.getPreferredCorrelationDomain().equals(domain))
+                    {
                         identifier = pid.getIdentifier();
                         assigningAuthority = domain;
                         break;
                     }
                 }
-            } else // use local identity
+            }
+            else // use local identity
             {
                 identifier = patient.getId().toString();
                 assigningAuthority = this.m_configuration.getLocalPatientIdRoot();
             }
 
             // No identity domains to xref with
-            if (identifier == null || assigningAuthority == null) {
+            if(identifier == null || assigningAuthority == null)
+            {
                 log.warn(String.format("Patient %s has no good cross reference identities to use", patient.getId()));
                 return null;
             }
@@ -416,7 +334,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                             .exactly().systemAndIdentifier(assigningAuthority, identifier))
                     .count(2).returnBundle(Bundle.class).execute();
             // ASSERT: Only 1 result
-            if (results.getEntry().size() != 1)
+            if(results.getEntry().size() != 1)
                 throw new MpiClientException(String.format("Found ambiguous matches (%s matches) on MPI, can't reliably xref this patient", results.getTotal()));
 
             // Is there a result?
@@ -424,19 +342,20 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                 org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
 
                 // Is this patient linked to another patient?
-                if (pat.getLink() != null)
-                    for (PatientLinkComponent lnk : pat.getLink()) {
-                        if (LinkType.REFER.equals(lnk.getType())) {
-                            pat = (org.hl7.fhir.r4.model.Patient) lnk.getOtherTarget();
+                if(pat.getLink() != null)
+                    for(PatientLinkComponent lnk : pat.getLink())
+                    {
+                        if(LinkType.REFER.equals(lnk.getType())) {
+                            pat = (org.hl7.fhir.r4.model.Patient)lnk.getOtherTarget();
                         }
                     }
 
-                MpiPatient mpiPatient = (MpiPatient) patientTranslator.toOpenmrsType(pat);
-
+                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
                 // Now look for the identity domain we want to xref to
-                for (PatientIdentifier pid : mpiPatient.getIdentifiers()) {
+                for(PatientIdentifier pid : mpiPatient.getIdentifiers())
+                {
                     String domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName());
-                    if (toAssigningAuthority.equals(domain))
+                    if(toAssigningAuthority.equals(domain))
                         return pid;
                 }
                 return null;
@@ -452,7 +371,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
     /**
      * Imports patient from MPI? Was in not implemented due to lack of FHIR create capabilites in OpenMRS?
-     *
      * @param patient
      * @return
      * @throws MpiClientException
@@ -470,13 +388,76 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
     @Override
     public void exportPatient(MpiPatientExport patientExport) throws MpiClientException {
         org.hl7.fhir.r4.model.Patient admitMessage = null;
+
         try {
             admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
-
+            admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
             // TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
             // Temporary URI identifier
-            admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
             admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getUuid());
+
+
+            //            Set mother's name
+            if(patientExport.getMothersMaidenName() != null){
+                Extension mothersMaidenName = new Extension();
+                mothersMaidenName.setUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
+                mothersMaidenName.setValue(new StringType(patientExport.getMothersMaidenName().getValue()));
+                admitMessage.addExtension(mothersMaidenName);
+            }
+            //            Set Patient Phone number
+            PersonAttribute patientTelephone = patientExport.getPatientTelephone();
+            if(patientTelephone != null){
+                ContactPoint contactPoint = new ContactPoint();
+                contactPoint.setId(patientTelephone.getUuid());
+                contactPoint.setValue(patientTelephone.getValue());
+                contactPoint.setSystem(ContactPoint.ContactPointSystem.PHONE);
+                contactPoint.setUse(ContactPoint.ContactPointUse.MOBILE);
+                admitMessage.addTelecom(contactPoint);
+            }
+
+
+//            Patient Obs processing
+            Set<Obs> patientObs = patientExport.getPatientObs();
+            if(patientObs != null){
+                for (Obs obs : patientObs) {
+                    switch (obs.getConcept().getConceptId()) {
+                        case 165194: {//Place of birth address construct
+//                            165195=>locality, 165198=>country of residence, 1354=>village, 165197=>province, 165196=>communal section, 162725=> address
+                            log.error("===========================================================================================================================");
+                            log.error("Processing Place of Birth for "+obs.getConcept().getName().getName());
+                            log.error("===========================================================================================================================");
+                            Extension birthplace = new Extension();
+                            birthplace.setUrl("http://hl7.org/fhir/StructureDefinition/patient-birthPlace");
+                            Address address = parseAddress(obs);
+                            birthplace.setValue(address);
+                            log.error("########################################################################################");
+                            log.error("Before: => "+admitMessage.getExtension().size());
+                            log.error("########################################################################################");
+                            admitMessage.addExtension(birthplace);
+
+                            log.error("########################################################################################");
+                            log.error("AFter: => "+admitMessage.getExtension().size());
+                            log.error("########################################################################################");
+                            break;
+                        }
+                        case 165210:
+                        case 165213:
+                        case 165212: {//Emergency contact construct, Primary medical disclosure construct,secondary medical disclosure construct
+//                            159635=> phone number, 164352=> relationship to patient, 163258 => name of contact,
+//                            165196 => communal section, 165195=> locality, 165198=> country of residence, 1354=> village, 165197=> province, 162725=> address
+                            log.error("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+                            log.error("Processing Contact for "+obs.getConcept().getName().getName());
+                            log.error("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+                            admitMessage.addContact(translatePatientContact(obs));
+                            break;
+                        }
+                    }
+                }
+            }
+
+
+
+
 
             IGenericClient client = this.getClient(false);
             MethodOutcome result = client.create().resource(admitMessage).execute();
@@ -498,19 +479,109 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
     }
 
+    private Address parseAddress(Obs obs) {
+        Address fhirAddress = new Address();
+        fhirAddress.setUse(Address.AddressUse.HOME);
+        obs.getGroupMembers().forEach(member -> {
+
+            switch (member.getConcept().getConceptId()){
+                case 165197: {
+//                    Province of residence
+                    fhirAddress.setState(member.getValueText());
+                    break;
+                }
+                case 165196: {
+//                    Communal section
+                    fhirAddress.addExtension("Communal section", new StringType(member.getValueText()));
+                    break;
+                }
+                case 165198: {
+//                    Country
+                    fhirAddress.setCountry(member.getValueText());
+                    break;
+                }
+                case 162725: {
+//                    Address (text)
+                    fhirAddress.addExtension("Address Text", new StringType(member.getValueText()));
+                    break;
+                }
+                case 1354: {
+//                    Village
+                    fhirAddress.setCity(member.getValueText());
+                    break;
+                }
+                case 165195: {
+//                    Locality
+                    fhirAddress.addExtension("Locality", new StringType(member.getValueText()));
+                    break;
+                }
+                default: {
+//                    Do nothing
+                }
+            }
+        });
+
+        return fhirAddress;
+    }
+
+    private org.hl7.fhir.r4.model.Patient.ContactComponent translatePatientContact(org.openmrs.Obs patientOb) {
+        Set<org.openmrs.Obs> contactMembers = patientOb.getGroupMembers(false);
+//		Add patient contact -
+        org.hl7.fhir.r4.model.Patient.ContactComponent contactComponent = new org.hl7.fhir.r4.model.Patient.ContactComponent();
+
+        Address address = parseAddress(patientOb);
+        contactComponent.setAddress(address);
+
+        for (org.openmrs.Obs cm : contactMembers) {
+            if (cm.getConcept().getConceptId() == 163258) {
+//				Process contact name
+                HumanName contactName = new HumanName();
+                String[] names = cm.getValueText().split(" ");
+
+                if (names.length > 1) {
+                    contactName.setFamily(names[1]);
+                    List<StringType> ns = new ArrayList<StringType>() {{
+                        add(new StringType(names[0]));
+                    }};
+                    contactName.setGiven(ns);
+                } else if (names.length == 1) {
+                    contactName.setFamily(names[0]);
+                }
+                contactComponent.setName(contactName);
+            } else if (cm.getConcept().getConceptId() == 159635) {
+//				Process contact's phone number
+                ContactPoint telco = new ContactPoint();
+                telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
+                telco.setValue(cm.getValueText());
+                telco.setUse(ContactPoint.ContactPointUse.MOBILE);
+                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
+                    add(telco);
+                }};
+                contactPoints.add(telco);
+                contactComponent.setTelecom(contactPoints);
+            } else if (cm.getConcept().getConceptId() == 164352) {
+//            	Process relationship to patient
+                CodeableConcept concept = new CodeableConcept();
+                concept.setText(cm.getValueCoded().getName().getName());
+                contactComponent.addRelationship(concept);
+            }
+        }
+        return contactComponent;
+    }
+
+
     /**
      * Updates the MPI patient information with local patient information
      */
     @Override
-    public void updatePatient(Patient patient) throws MpiClientException {
+    public void updatePatient(MpiPatientExport patientExport) throws MpiClientException {
         org.hl7.fhir.r4.model.Patient admitMessage = null;
 
         try {
-            admitMessage = patientTranslator.toFhirResource(patient);
-
+            admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
+            admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
             // Temporary URI identifier
-            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot() + patient.getPatientIdentifier().getIdentifier());
-
+            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getUuid());
             IGenericClient client = this.getClient(false);
             MethodOutcome result = client.update().resource(admitMessage).execute();
             if (!result.getCreated())

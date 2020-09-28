@@ -241,11 +241,6 @@
 		<description>The attribute name to use for the Mother's maiden name</description>
 	</globalProperty>
 	<globalProperty>
-		<property>mpi-client.reg.birthPlace</property>
-		<defaultValue>Birth Place Construct</defaultValue>
-		<description>The attribute name to use for the patient's birth place</description>
-	</globalProperty>
-	<globalProperty>
 		<property>mpi-client.reg.birthPlaceConcept</property>
 		<defaultValue>165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</defaultValue>
 		<description>Concept UUID for the patient place of birth construct</description>

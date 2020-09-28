@@ -29,7 +29,6 @@ import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.springframework.aop.AfterReturningAdvice;
 
 import java.lang.reflect.Method;
-import java.util.concurrent.TimeUnit;
 
 /**
  * After returning from the save method of the Patient service
@@ -48,16 +47,9 @@ public class EncounterSynchronizationAdvice implements AfterReturningAdvice {
     public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
         if (method.getName().equals("saveEncounter") && target instanceof EncounterService) {
             org.openmrs.Encounter encounter = (Encounter) returnValue;
-            if(encounter.getObsAtTopLevel(false).size() > 0){
-                try {
-                    TimeUnit.SECONDS.sleep(15);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                }
-                MpiPatientExport patientExport = new MpiPatientExport(encounter.getPatient(), null, null, null, encounter.getObsAtTopLevel(false));
-                PatientUpdateWorker worker = new PatientUpdateWorker(patientExport, Context.getUserContext());
-                worker.start();
-            }
+            MpiPatientExport patientExport = new MpiPatientExport(encounter.getPatient(), null, null, null, encounter.getObsAtTopLevel(false));
+            PatientUpdateWorker worker = new PatientUpdateWorker(patientExport, Context.getUserContext());
+            worker.start();
         }
     }
 

@@ -91,7 +91,7 @@ public interface MpiClientService extends OpenmrsService {
 	 * Export patient demographic record to the CR
 	 * @param patient
 	 */
-	public void updatePatient(Patient patient) throws MpiClientException;
+	public void updatePatient(MpiPatientExport patientExport) throws MpiClientException;
 
 	/**
 	 * Get the audit logger
