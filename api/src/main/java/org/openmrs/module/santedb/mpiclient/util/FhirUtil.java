@@ -17,16 +17,14 @@
 package org.openmrs.module.santedb.mpiclient.util;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.DataTypeException;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Address.AddressUse;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
@@ -39,8 +37,13 @@ import org.openmrs.PatientIdentifierType;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonName;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.fhir2.FhirConstants;
+import org.openmrs.module.fhir2.api.translators.TelecomTranslator;
+import org.openmrs.module.fhir2.api.translators.impl.TelecomTranslatorImpl;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+
+import static org.apache.commons.lang3.Validate.notNull;
 
 
 public class FhirUtil {
@@ -98,13 +101,16 @@ public class FhirUtil {
 	/**
 	 * Interpret the XAD as a person address
 	 * 
-	 * @param xad
 	 * @return
 	 */
 	private PersonAddress interpretFhirAddress(Address addr) {
-		PersonAddress pa = new PersonAddress();
 
+		PersonAddress pa = new PersonAddress();
+		if (addr == null) {
+			return pa;
+		}
 		// Set the address
+		pa.setUuid(addr.getId());
 		if(addr.hasLine())
 			pa.setAddress1(addr.getLine().get(0).asStringValue());
 		if(addr.hasCity())
@@ -172,7 +178,6 @@ public class FhirUtil {
 	 * 
 	 * @param name The name to be updated with the contents of pn
 	 * @param pn   The person name to convert
-	 * @throws RegexSyntaxException
 	 */
 	private void updateFhirName(HumanName name, PersonName pn)  {
 
@@ -199,11 +204,14 @@ public class FhirUtil {
 	/**
 	 * Interpret the FHIR HumanName as a Patient Name
 	 * 
-	 * @param pn The name to interpret
 	 * @return The interpreted name
 	 */
 	private PersonName interpretFhirName(HumanName name) {
+		if (name == null) {
+			return null;
+		}
 		PersonName pn = new PersonName();
+		pn.setUuid(name.getId());
 
 		if (name.getFamily() == null
 				|| name.getFamily().isEmpty())
@@ -228,7 +236,6 @@ public class FhirUtil {
 	/**
 	 * Updates the specified HL7v2 address
 	 * 
-	 * @param xad
 	 * @param pa
 	 * @throws DataTypeException
 	 */
@@ -261,7 +268,6 @@ public class FhirUtil {
 	 * @param localIdOnly When true, only use the local ID
 	 * @return The FHIR Patient
 	 * @throws HL7Exception
-	 * @throws RegexSyntaxException
 	 */
 	// TODO: replace with fhir2 functionality
 	public org.hl7.fhir.r4.model.Patient createFhirPatient(Patient patient, boolean localIdOnly)
@@ -354,39 +360,26 @@ public class FhirUtil {
 	public MpiPatient parseFhirPatient(org.hl7.fhir.r4.model.Patient fhirPatient)
 	{
 		MpiPatient patient = new MpiPatient();
+
+		notNull(patient, "The existing Openmrs Patient object should not be null");
+		notNull(fhirPatient, "The Patient object should not be null");
+
+//		Set UUID
+		patient.setUuid(fhirPatient.getId());
+
+
+
 		// Attempt to load a patient by identifier
-		for (Identifier id : fhirPatient.getIdentifier()) {
-			// ID is a local identifier
-			if (this.m_configuration.getLocalPatientIdRoot().equals(id.getSystem())) {
-				if (StringUtils.isNumeric(id.getValue()))
-					patient.setId(Integer.parseInt(id.getValue()));
-				else {
-					this.log.warn(String.format(
-							"Patient identifier %s in %s claims to be from local domain but is not in a valid format",
-							id.getValue(),
-							id.getSystem()));
-					continue;
-				}
-			}
-			// ID is the preferred correlation domain
-			else if (this.m_configuration.getPreferredCorrelationDomain() != null
-					&& !this.m_configuration.getPreferredCorrelationDomain().isEmpty()
-					&& (this.m_configuration.getPreferredCorrelationDomain().equals(id.getSystem()))) {
-
-				PatientIdentifier patientIdentifier = this.interpretFhirId(id);
-				List<PatientIdentifierType> identifierTypes = new ArrayList<PatientIdentifierType>();
-				identifierTypes.add(patientIdentifier.getIdentifierType());
-				List<PatientIdentifier> matchPatientIds = Context.getPatientService().getPatientIdentifiers(patientIdentifier.getIdentifier(), identifierTypes, null, null, null);
-
-				if (matchPatientIds != null && matchPatientIds.size() > 0)
-					patient.setId(matchPatientIds.get(0).getPatient().getId());
+		Iterator identifierIterator = fhirPatient.getIdentifier().iterator();
+		while(identifierIterator.hasNext()) {
+			Identifier identifier = (Identifier)identifierIterator.next();
+			PatientIdentifier patientIdentifier = IdentifierTranslator.translateIdentifier(identifier);
+			if(patientIdentifier != null){
 				patient.addIdentifier(patientIdentifier);
-			} else {
-				PatientIdentifier patId = this.interpretFhirId(id);
-				if (patId != null)
-					patient.addIdentifier(patId);
 			}
+
 		}
+
 
 		// Enterprise root? 
 		if(null != this.m_configuration.getEnterprisePatientIdRoot() && !this.m_configuration.getEnterprisePatientIdRoot().isEmpty())
@@ -403,7 +396,6 @@ public class FhirUtil {
 		
 		// Attempt to copy names
 		for (HumanName name : fhirPatient.getName()) {
-
 			PersonName pn = this.interpretFhirName(name);
 			patient.addName(pn);
 		}
@@ -425,10 +417,17 @@ public class FhirUtil {
 
 		// Death details
 		if (fhirPatient.hasDeceased()) {
-			if(fhirPatient.getDeceased() instanceof DateType)
+			try {
+				fhirPatient.getDeceasedBooleanType();
+				patient.setDead(fhirPatient.getDeceasedBooleanType().booleanValue());
+			}
+			catch (FHIRException ignored) {}
+			try {
+				fhirPatient.getDeceasedDateTimeType();
+				patient.setDead(true);
 				patient.setDeathDate(fhirPatient.getDeceasedDateTimeType().getValue());
-			else 
-				patient.setDead(fhirPatient.getDeceasedBooleanType().getValue());
+			}
+			catch (FHIRException ignored) {}
 		}
 		
 		// Addresses
@@ -440,6 +439,9 @@ public class FhirUtil {
 			PersonAddress pa = this.interpretFhirAddress(addr);
 			patient.addAddress(pa);
 		}
+
+//		Patient Telephone
+		fhirPatient.getTelecom().stream().map(contactPoint -> translateTelecom(contactPoint)).distinct().filter(Objects::nonNull).forEach(patient::addAttribute);
 
 		return patient;
 	}
@@ -488,4 +490,16 @@ public class FhirUtil {
         }
         return contactComponent;
     }
+
+    public org.openmrs.PersonAttribute translateTelecom(ContactPoint contactPoint){
+		org.openmrs.PersonAttribute personAttribute = new org.openmrs.PersonAttribute();
+		if (contactPoint == null) {
+			return personAttribute;
+		}
+		personAttribute.setUuid(contactPoint.getId());
+		personAttribute.setValue(contactPoint.getValue());
+		personAttribute.setAttributeType(Context.getPersonService().getPersonAttributeTypeByUuid(
+				Context.getAdministrationService().getGlobalProperty(FhirConstants.PERSON_CONTACT_ATTRIBUTE_TYPE)));
+		return  personAttribute;
+	}
 }

@@ -205,12 +205,12 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
      * Update patient in MPI
      */
     @Override
-    public void updatePatient(Patient patient) throws MpiClientException {
+    public void updatePatient(MpiPatientExport patientExport) throws MpiClientException {
         // TODO Auto-generated method stub
         if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
-            this.m_fhirService.updatePatient(patient);
+            this.m_fhirService.updatePatient(patientExport);
         else
-            this.m_hl7Service.updatePatient(patient);
+            this.m_hl7Service.updatePatient(patientExport);
     }
 
     /**
