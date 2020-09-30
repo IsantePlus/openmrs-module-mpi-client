@@ -443,6 +443,16 @@ public class FhirUtil {
 //		Patient Telephone
 		fhirPatient.getTelecom().stream().map(contactPoint -> translateTelecom(contactPoint)).distinct().filter(Objects::nonNull).forEach(patient::addAttribute);
 
+//		Source Location
+		Identifier identifierFirstRep = fhirPatient.getIdentifierFirstRep();
+		if(identifierFirstRep.hasExtension("http://fhir.openmrs.org/ext/patient/identifier#location")){
+			Extension locationExtension = identifierFirstRep.getExtensionByUrl("http://fhir.openmrs.org/ext/patient/identifier#location");
+			Reference value = (Reference) locationExtension.getValue();
+			patient.setSourceLocation(value.getDisplay());
+		}
+
+
+
 		return patient;
 	}
 

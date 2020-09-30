@@ -36,6 +36,8 @@ public class MpiPatient extends Patient {
 	
 	// Backing field for relationships
 	private List<Relationship> m_relationships = new ArrayList<Relationship>();
+
+	private String sourceLocation;
 	
 	/**
 	 * Get relationships of the patient
@@ -50,7 +52,15 @@ public class MpiPatient extends Patient {
 	public void addRelationship(Relationship relationship) {
 		this.m_relationships.add(relationship);
 	}
-	
+
+	public String getSourceLocation() {
+		return sourceLocation;
+	}
+
+	public void setSourceLocation(String sourceLocation) {
+		this.sourceLocation = sourceLocation;
+	}
+
 	/**
 	 * Convert this MpiPatient to an actual patient
 	 */
