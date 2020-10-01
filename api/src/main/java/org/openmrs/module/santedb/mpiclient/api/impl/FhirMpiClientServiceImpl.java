@@ -33,6 +33,7 @@ import ca.uhn.fhir.rest.gclient.IQuery;
 import com.google.common.io.CharStreams;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
@@ -222,16 +223,17 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             query = query.where(org.hl7.fhir.r4.model.Patient.GENDER.exactly().code(gender));
 
         if (patientIdentifier != null) {
-            if (patientIdentifier.getIdentifierType() != null) {
-                String authority = this.m_configuration.getLocalPatientIdentifierTypeMap()
-                        .get(patientIdentifier.getIdentifierType().getName());
-                if (authority == null)
-                    throw new MpiClientException(
-                            String.format("Identity domain %s doesn't have an equivalent in the MPI configuration",
-                                    patientIdentifier.getIdentifierType().getName()));
-                query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
-                        .systemAndIdentifier(patientIdentifier.getIdentifier(), authority));
-            } else
+//            TODO uncomment once the identifier domain functionality is enforced at the MPI
+//            if (patientIdentifier.getIdentifierType() != null) {
+//                String authority = this.m_configuration.getLocalPatientIdentifierTypeMap()
+//                        .get(patientIdentifier.getIdentifierType().getName());
+//                if (authority == null)
+//                    throw new MpiClientException(
+//                            String.format("Identity domain %s doesn't have an equivalent in the MPI configuration",
+//                                    patientIdentifier.getIdentifierType().getName()));
+//                query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
+//                        .systemAndIdentifier(patientIdentifier.getIdentifier(), authority));
+//            } else
                 query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
                         .identifier(patientIdentifier.getIdentifier()));
 
@@ -250,15 +252,14 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             List<MpiPatient> retVal = new ArrayList<MpiPatient>();
             for (BundleEntryComponent result : results.getEntry()) {
                 org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-
-                // TODO: Create module-specific translator: Fhir.Patient <--> MpiPatient
                 MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
                 retVal.add(mpiPatient);
             }
             return retVal;
         } catch (Exception e) {
             e.printStackTrace();
-            log.error("Error in PDQ Search", e);
+            log.error("Error in FHIR Search", e);
+            log.error(ExceptionUtils.getFullStackTrace(e));
             throw new MpiClientException(e);
         } finally {
         }
