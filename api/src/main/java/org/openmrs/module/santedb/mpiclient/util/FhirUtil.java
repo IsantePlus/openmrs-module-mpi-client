@@ -375,8 +375,8 @@ public class FhirUtil {
 		Iterator identifierIterator = fhirPatient.getIdentifier().iterator();
 		while(identifierIterator.hasNext()) {
 			Identifier identifier = (Identifier)identifierIterator.next();
-//			Ignore IsantePlus  and Code ST IDs
-			if(identifier.hasType() && ("Code ST".equals(identifier.getType().getText()) || "iSantePlus ID".equals(identifier.getType().getText()))){
+//			Ignore Code ST IDs
+			if(identifier.hasType() && ("Code ST".equals(identifier.getType().getText()))){
 				continue;
 			}
 			PatientIdentifier patientIdentifier = IdentifierTranslator.translateIdentifier(identifier);
