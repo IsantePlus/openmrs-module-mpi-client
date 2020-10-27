@@ -287,7 +287,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
         // Send the message and construct the result set
         try {
-
             Bundle results = this
                     .getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
 //                            .exactly().systemAndIdentifier(assigningAuthority, identifier))
@@ -533,6 +532,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         Address address = parseAddress(patientOb);
         contactComponent.setAddress(address);
         contactComponent.setProperty("type",new StringType(patientOb.getConcept().getName().getName()));
+
+        Reference reference = new Reference();
+        reference.setDisplay(patientOb.getConcept().getName().getName());
+        contactComponent.setOrganization(reference);
+
 
         for (org.openmrs.Obs cm : contactMembers) {
             if (cm.getConcept().getConceptId() == 163258) {
