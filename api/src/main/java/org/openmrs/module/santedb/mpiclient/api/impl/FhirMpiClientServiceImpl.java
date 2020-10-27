@@ -273,7 +273,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
         // Send the message and construct the result set
         try {
-
             Bundle results = this
                     .getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
 //                            .exactly().systemAndIdentifier(assigningAuthority, identifier))
@@ -424,21 +423,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                     switch (obs.getConcept().getConceptId()) {
                         case 165194: {//Place of birth address construct
 //                            165195=>locality, 165198=>country of residence, 1354=>village, 165197=>province, 165196=>communal section, 162725=> address
-                            log.error("===========================================================================================================================");
-                            log.error("Processing Place of Birth for "+obs.getConcept().getName().getName());
-                            log.error("===========================================================================================================================");
                             Extension birthplace = new Extension();
                             birthplace.setUrl("http://hl7.org/fhir/StructureDefinition/patient-birthPlace");
                             Address address = parseAddress(obs);
                             birthplace.setValue(address);
-                            log.error("########################################################################################");
-                            log.error("Before: => "+admitMessage.getExtension().size());
-                            log.error("########################################################################################");
                             admitMessage.addExtension(birthplace);
-
-                            log.error("########################################################################################");
-                            log.error("AFter: => "+admitMessage.getExtension().size());
-                            log.error("########################################################################################");
                             break;
                         }
                         case 165210:
@@ -446,9 +435,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                         case 165212: {//Emergency contact construct, Primary medical disclosure construct,secondary medical disclosure construct
 //                            159635=> phone number, 164352=> relationship to patient, 163258 => name of contact,
 //                            165196 => communal section, 165195=> locality, 165198=> country of residence, 1354=> village, 165197=> province, 162725=> address
-                            log.error("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-                            log.error("Processing Contact for "+obs.getConcept().getName().getName());
-                            log.error("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
                             admitMessage.addContact(translatePatientContact(obs));
                             break;
                         }
@@ -533,6 +519,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         Address address = parseAddress(patientOb);
         contactComponent.setAddress(address);
 
+        Reference reference = new Reference();
+        reference.setDisplay(patientOb.getConcept().getName().getName());
+        contactComponent.setOrganization(reference);
+
+
         for (org.openmrs.Obs cm : contactMembers) {
             if (cm.getConcept().getConceptId() == 163258) {
 //				Process contact name
@@ -555,9 +546,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                 telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
                 telco.setValue(cm.getValueText());
                 telco.setUse(ContactPoint.ContactPointUse.MOBILE);
-                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
-                    add(telco);
-                }};
+                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>();
                 contactPoints.add(telco);
                 contactComponent.setTelecom(contactPoints);
             } else if (cm.getConcept().getConceptId() == 164352) {

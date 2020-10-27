@@ -36,6 +36,7 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonName;
+import org.openmrs.api.ConceptService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.fhir2.FhirConstants;
 import org.openmrs.module.fhir2.api.translators.TelecomTranslator;
@@ -365,7 +366,7 @@ public class FhirUtil {
 		notNull(fhirPatient, "The Patient object should not be null");
 
 //		Set UUID
-		patient.setUuid(fhirPatient.getId());
+//		patient.setUuid(fhirPatient.getId());
 
 
 
@@ -373,10 +374,6 @@ public class FhirUtil {
 		Iterator identifierIterator = fhirPatient.getIdentifier().iterator();
 		while(identifierIterator.hasNext()) {
 			Identifier identifier = (Identifier)identifierIterator.next();
-//			Ignore Code ST IDs
-			if(identifier.hasType() && ("Code ST".equals(identifier.getType().getText()))){
-				continue;
-			}
 			PatientIdentifier patientIdentifier = IdentifierTranslator.translateIdentifier(identifier);
 			if(patientIdentifier != null){
 				patient.addIdentifier(patientIdentifier);
@@ -447,6 +444,10 @@ public class FhirUtil {
 //		Patient Telephone
 		fhirPatient.getTelecom().stream().map(contactPoint -> translateTelecom(contactPoint)).distinct().filter(Objects::nonNull).forEach(patient::addAttribute);
 
+
+//		Patient Contacts
+		fhirPatient.getContact().stream().map(contactComponent -> translateContactComponent(contactComponent)).distinct().filter(Objects::nonNull).forEach(patient::addPatientObservation);
+
 //		Source Location
 		Identifier identifierFirstRep = fhirPatient.getIdentifierFirstRep();
 		if(identifierFirstRep.hasExtension("http://fhir.openmrs.org/ext/patient/identifier#location")){
@@ -454,6 +455,15 @@ public class FhirUtil {
 			Reference value = (Reference) locationExtension.getValue();
 			patient.setSourceLocation(value.getDisplay());
 		}
+
+//		Mother's maiden name
+		Extension mothersMaidenName = fhirPatient.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
+		if(mothersMaidenName != null){
+			org.openmrs.PersonAttributeType attributeType = Context.getPersonService().getPersonAttributeTypeByName(m_configuration.getMothersAttributeName());
+			org.openmrs.PersonAttribute attribute = new org.openmrs.PersonAttribute(attributeType,((StringType)mothersMaidenName.getValue()).getValue());
+			patient.addAttribute(attribute);
+		}
+
 
 
 
@@ -495,7 +505,7 @@ public class FhirUtil {
 //            	Process relationship to patient
                 CodeableConcept concept = new CodeableConcept();
                 concept.setText(cm.getValueCodedName().getName());
-                contactComponent.addRelationship(new CodeableConcept());
+                contactComponent.addRelationship(concept);
 
             } else if (cm.getConcept().getConceptId() == 164958) {
 //            	Wrong mapping for address
@@ -515,5 +525,115 @@ public class FhirUtil {
 		personAttribute.setAttributeType(Context.getPersonService().getPersonAttributeTypeByUuid(
 				Context.getAdministrationService().getGlobalProperty(FhirConstants.PERSON_CONTACT_ATTRIBUTE_TYPE)));
 		return  personAttribute;
+	}
+
+
+	private org.openmrs.Obs translateContactComponent(ContactComponent contactComponent) {
+		ConceptService conceptService = Context.getConceptService();
+		org.openmrs.Obs parent = new  org.openmrs.Obs();
+		Set<org.openmrs.Obs> contactMembers = new HashSet<>();
+
+//		Set type
+		Reference organization = contactComponent.getOrganization();
+		if(organization != null){
+			parent.setConcept(conceptService.getConceptByName(organization.getDisplay()));
+		}
+//		Set location
+		parent.setLocation(Context.getLocationService().getDefaultLocation());
+
+//		set name
+		if(contactComponent.hasName()){
+			HumanName humanName = contactComponent.getName();
+			if(humanName.hasFamily()){
+				String contactName = "";
+				if(humanName.hasGiven()){
+					contactName += humanName.getGiven().toString() + " ";
+				}
+				contactName += humanName.getFamily();
+				org.openmrs.Obs nameObs = new org.openmrs.Obs();
+				nameObs.setConcept(conceptService.getConcept(163258));
+				nameObs.setValueText(contactName);
+				contactMembers.add(nameObs);
+			}
+		}
+
+
+//		Process phone number
+		if(contactComponent.hasTelecom()){
+			ContactPoint telecomComponent = contactComponent.getTelecomFirstRep();
+			org.openmrs.Obs telecomObs = new org.openmrs.Obs();
+			telecomObs.setConcept(conceptService.getConcept(159635));
+			telecomObs.setValueText(telecomComponent.getValue());
+			contactMembers.add(telecomObs);
+		}
+
+//		Process relationship to patient
+		if(contactComponent.hasRelationship()){
+			CodeableConcept patientRelationship = contactComponent.getRelationshipFirstRep();
+			org.openmrs.Obs relationshipObs = new org.openmrs.Obs();
+			relationshipObs.setConcept(conceptService.getConcept(164352));
+			relationshipObs.setValueCoded(conceptService.getConceptByName(patientRelationship.getText()));
+			contactMembers.add(relationshipObs);
+		}
+
+//		Process contact address
+		if(contactComponent.hasAddress()){
+			org.openmrs.Obs obs =   null;
+			Address contactAddress = contactComponent.getAddress();
+
+			String city = contactAddress.getCity();
+			obs = new org.openmrs.Obs();
+			obs.setConcept(conceptService.getConcept(1354));
+			obs.setValueText(String.valueOf(city));
+			contactMembers.add(obs);
+
+
+
+			String state = contactAddress.getState();
+			obs = new org.openmrs.Obs();
+			obs.setConcept(conceptService.getConcept(165197));
+			obs.setValueText(String.valueOf(state));
+			contactMembers.add(obs);
+
+
+			String country = contactAddress.getCountry();
+//			165198
+			obs = new org.openmrs.Obs();
+			obs.setConcept(conceptService.getConcept(165198));
+			obs.setValueText(String.valueOf(country));
+			contactMembers.add(obs);
+
+			Iterator<Extension> iterator = contactAddress.getExtension().iterator();
+
+			while (iterator.hasNext()){
+				Extension nextExtension = iterator.next();
+				switch (nextExtension.getUrl()){
+					case "Address Text": {
+						processAddressExtension(conceptService, contactMembers, nextExtension);
+					}
+					case "Communal section": {
+						processAddressExtension(conceptService, contactMembers, nextExtension);
+						break;
+					}
+					case "Locality": {
+						processAddressExtension(conceptService, contactMembers, nextExtension);
+					}
+				}
+			}
+
+		}
+
+		parent.setGroupMembers(contactMembers);
+
+
+		return parent;
+
+	}
+
+	private void processAddressExtension(ConceptService conceptService, Set<Obs> contactMembers, Extension nextExtension) {
+		Obs obs = new Obs();
+		obs.setConcept(conceptService.getConceptByName(nextExtension.getUrl()));
+		obs.setValueText(String.valueOf(nextExtension.getValue()));
+		contactMembers.add(obs);
 	}
 }
