@@ -33,7 +33,7 @@ public class MpiPatient extends Patient {
 	
 	// Backing field for relationships
 	private List<Relationship> relationships = new ArrayList<>();
-	private Set<Obs> patientObservations = new HashSet<>();
+	private Set<Obs> 	patientObservations = new HashSet<>();
 
 	private String sourceLocation;
 	
