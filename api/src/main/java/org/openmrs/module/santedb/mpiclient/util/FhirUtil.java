@@ -16,6 +16,7 @@
  */
 package org.openmrs.module.santedb.mpiclient.util;
 
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -446,7 +447,19 @@ public class FhirUtil {
 
 
 //		Patient Contacts
-		fhirPatient.getContact().stream().map(contactComponent -> translateContactComponent(contactComponent)).distinct().filter(Objects::nonNull).forEach(patient::addPatientObservation);
+		Set<Obs> uniqueValues = new HashSet<>();
+		for (ContactComponent contactComponent : fhirPatient.getContact()) {
+			Obs obs = null;
+			try {
+				obs = translateContactComponent(contactComponent);
+				if (obs != null) {
+					patient.addPatientObservation(obs);
+				}
+			} catch (ParseException e) {
+				e.printStackTrace();
+			}
+
+		}
 
 //		Source Location
 		Identifier identifierFirstRep = fhirPatient.getIdentifierFirstRep();
@@ -528,8 +541,9 @@ public class FhirUtil {
 	}
 
 
-	private org.openmrs.Obs translateContactComponent(ContactComponent contactComponent) {
+	private org.openmrs.Obs translateContactComponent(ContactComponent contactComponent) throws ParseException {
 		ConceptService conceptService = Context.getConceptService();
+		org.openmrs.Location defaultLocation = Context.getLocationService().getDefaultLocation();
 		org.openmrs.Obs parent = new  org.openmrs.Obs();
 		Set<org.openmrs.Obs> contactMembers = new HashSet<>();
 
@@ -539,7 +553,7 @@ public class FhirUtil {
 			parent.setConcept(conceptService.getConceptByName(organization.getDisplay()));
 		}
 //		Set location
-		parent.setLocation(Context.getLocationService().getDefaultLocation());
+		parent.setLocation(defaultLocation);
 
 //		set name
 		if(contactComponent.hasName()){
@@ -552,7 +566,10 @@ public class FhirUtil {
 				contactName += humanName.getFamily();
 				org.openmrs.Obs nameObs = new org.openmrs.Obs();
 				nameObs.setConcept(conceptService.getConcept(163258));
-				nameObs.setValueText(contactName);
+				nameObs.setValueAsString(contactName);
+				nameObs.setLocation(defaultLocation);
+				nameObs.setObsDatetime(new Date());
+				logObsDetails(nameObs);
 				contactMembers.add(nameObs);
 			}
 		}
@@ -563,7 +580,10 @@ public class FhirUtil {
 			ContactPoint telecomComponent = contactComponent.getTelecomFirstRep();
 			org.openmrs.Obs telecomObs = new org.openmrs.Obs();
 			telecomObs.setConcept(conceptService.getConcept(159635));
-			telecomObs.setValueText(telecomComponent.getValue());
+			telecomObs.setValueAsString(telecomComponent.getValue());
+			telecomObs.setLocation(defaultLocation);
+			telecomObs.setObsDatetime(new Date());
+			logObsDetails(telecomObs);
 			contactMembers.add(telecomObs);
 		}
 
@@ -573,18 +593,23 @@ public class FhirUtil {
 			org.openmrs.Obs relationshipObs = new org.openmrs.Obs();
 			relationshipObs.setConcept(conceptService.getConcept(164352));
 			relationshipObs.setValueCoded(conceptService.getConceptByName(patientRelationship.getText()));
+			relationshipObs.setLocation(defaultLocation);
+			relationshipObs.setObsDatetime(new Date());
+			logObsDetails(relationshipObs);
 			contactMembers.add(relationshipObs);
 		}
 
 //		Process contact address
 		if(contactComponent.hasAddress()){
-			org.openmrs.Obs obs =   null;
+			org.openmrs.Obs obs;
 			Address contactAddress = contactComponent.getAddress();
-
 			String city = contactAddress.getCity();
 			obs = new org.openmrs.Obs();
 			obs.setConcept(conceptService.getConcept(1354));
-			obs.setValueText(String.valueOf(city));
+			obs.setValueAsString(String.valueOf(city));
+			obs.setLocation(defaultLocation);
+			obs.setObsDatetime(new Date());
+			logObsDetails(obs);
 			contactMembers.add(obs);
 
 
@@ -592,7 +617,10 @@ public class FhirUtil {
 			String state = contactAddress.getState();
 			obs = new org.openmrs.Obs();
 			obs.setConcept(conceptService.getConcept(165197));
-			obs.setValueText(String.valueOf(state));
+			obs.setValueAsString(String.valueOf(state));
+			obs.setLocation(defaultLocation);
+			obs.setObsDatetime(new Date());
+			logObsDetails(obs);
 			contactMembers.add(obs);
 
 
@@ -600,25 +628,17 @@ public class FhirUtil {
 //			165198
 			obs = new org.openmrs.Obs();
 			obs.setConcept(conceptService.getConcept(165198));
-			obs.setValueText(String.valueOf(country));
+			obs.setValueAsString(String.valueOf(country));
+			obs.setLocation(defaultLocation);
+			obs.setObsDatetime(new Date());
+			logObsDetails(obs);
 			contactMembers.add(obs);
 
 			Iterator<Extension> iterator = contactAddress.getExtension().iterator();
 
 			while (iterator.hasNext()){
 				Extension nextExtension = iterator.next();
-				switch (nextExtension.getUrl()){
-					case "Address Text": {
-						processAddressExtension(conceptService, contactMembers, nextExtension);
-					}
-					case "Communal section": {
-						processAddressExtension(conceptService, contactMembers, nextExtension);
-						break;
-					}
-					case "Locality": {
-						processAddressExtension(conceptService, contactMembers, nextExtension);
-					}
-				}
+				processAddressExtension(conceptService, contactMembers, nextExtension);
 			}
 
 		}
@@ -630,10 +650,40 @@ public class FhirUtil {
 
 	}
 
-	private void processAddressExtension(ConceptService conceptService, Set<Obs> contactMembers, Extension nextExtension) {
+	private void processAddressExtension(ConceptService conceptService, Set<Obs> contactMembers, Extension nextExtension) throws ParseException {
 		Obs obs = new Obs();
-		obs.setConcept(conceptService.getConceptByName(nextExtension.getUrl()));
-		obs.setValueText(String.valueOf(nextExtension.getValue()));
-		contactMembers.add(obs);
+		org.openmrs.Concept obsConcept = null;
+		switch (nextExtension.getUrl()){
+			case "Communal section": {
+				obsConcept = conceptService.getConcept(165196);
+				break;
+			}
+			case "Locality": {
+				obsConcept = conceptService.getConcept(165195);
+				break;
+			}
+			case "Address Text": {
+				obsConcept = conceptService.getConcept(162725);
+				break;
+			}
+		}
+		if(obsConcept!=null){
+			obs.setConcept(obsConcept);
+			obs.setValueAsString(String.valueOf(nextExtension.getValue()));
+			obs.setLocation(Context.getLocationService().getDefaultLocation());
+			obs.setObsDatetime(new Date());
+			logObsDetails(obs);
+			contactMembers.add(obs);
+		}else{
+//			Not processed given concept is missing
+
+		}
+	}
+
+	private void logObsDetails(Obs obs) {
+		log.error("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+		log.error("Processing Obs Details for: => " + obs.getConcept().getName().getName());
+		log.error("Value: => " + obs.getValueText());
+		log.error("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 	}
 }
