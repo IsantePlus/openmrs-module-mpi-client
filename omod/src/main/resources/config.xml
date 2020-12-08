@@ -34,6 +34,10 @@
 		 <point>org.openmrs.api.PatientService</point>
 		 <class>${project.parent.groupId}.santedb.mpiclient.aop.PatientSynchronizationAdvice</class>
 	</advice>
+	<advice>
+		 <point>org.openmrs.api.EncounterService</point>
+		 <class>${project.parent.groupId}.santedb.mpiclient.aop.EncounterSynchronizationAdvice</class>
+	</advice>
 	<!-- AOP
 	<advice>
 		<point>org.openmrs.api.FormService</point>
@@ -230,6 +234,21 @@
 		<property>mpi-client.http.proxyAddress</property>
 		<defaultValue></defaultValue>
 		<description>The proxy to use for HTTP traffic</description>
+	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.reg.mothersName</property>
+		<defaultValue>First Name of Mother</defaultValue>
+		<description>The attribute name to use for the Mother's maiden name</description>
+	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.reg.birthPlaceConcept</property>
+		<defaultValue>165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA</defaultValue>
+		<description>Concept UUID for the patient place of birth construct</description>
+	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.reg.patientTelephoneNumber</property>
+		<defaultValue>Telephone Number</defaultValue>
+		<description>The telephone number for the patient</description>
 	</globalProperty>
 		<!--
 	<dwr>

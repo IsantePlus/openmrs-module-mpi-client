@@ -31,6 +31,7 @@ import org.openmrs.api.context.UserContext;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.exception.MpiClientException;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 
 /**
  * Patient update worker
@@ -45,15 +46,15 @@ public class PatientUpdateWorker extends Thread {
 	private final MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 	private final UserContext m_userContext;
 
-	private Patient m_patient;
+	private MpiPatientExport mpiPatientExport;
 
 	/**
 	 * Create a new patient update worker
 	 * 
 	 * @param patient
 	 */
-	public PatientUpdateWorker(Patient patient, UserContext ctx) {
-		this.m_patient = patient;
+	public PatientUpdateWorker(MpiPatientExport patient, UserContext ctx) {
+		this.mpiPatientExport = patient;
 		this.m_userContext = ctx;
 	}
 
@@ -63,12 +64,13 @@ public class PatientUpdateWorker extends Thread {
 	@Override
 	public void run() {
 		log.info("Sending update to the MPI for new patient data...");
+		Patient m_patient = this.mpiPatientExport.getPatient();
 		try {
 			Context.openSession();
 			Context.setUserContext(this.m_userContext);
 			MpiClientService hieService = Context.getService(MpiClientService.class);
 
-			hieService.exportPatient(this.m_patient);
+			hieService.exportPatient(this.mpiPatientExport);
 
 			// Grab the national health ID for the patient
 			if (this.m_configuration.getAutomaticCrossReferenceDomains() != null) {
@@ -83,7 +85,7 @@ public class PatientUpdateWorker extends Thread {
 
 				for (String xrefDomain : autoXrefDomains) {
 
-					log.info(String.format("Will XREF %s with %s", this.m_patient.getId(), xrefDomain));
+					log.info(String.format("Will XREF %s with %s", m_patient.getId(), xrefDomain));
 
 					PatientIdentifierType pit = null;
 					for (String key : identifierMaps.keySet())
@@ -95,17 +97,17 @@ public class PatientUpdateWorker extends Thread {
 					List<PatientIdentifierType> pitList = new ArrayList<PatientIdentifierType>();
 					pitList.add(pit);
 					
-					if (pit != null && this.m_patient.getPatientIdentifier(pit) == null) {
-						PatientIdentifier pid = hieService.resolvePatientIdentifier(this.m_patient, xrefDomain);
+					if (pit != null && m_patient.getPatientIdentifier(pit) == null) {
+						PatientIdentifier pid = hieService.resolvePatientIdentifier(m_patient, xrefDomain);
 						// Already exists 
 						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pitList, null, null, null).size() != 0)
 							log.warn(String.format("Identifier %s already exists", pid.getIdentifier()));
 						else if (pid != null) {
-							pid.setPatient(this.m_patient);
+							pid.setPatient(m_patient);
 							Context.getPatientService().savePatientIdentifier(pid);
 						} else {
 							log.info(String.format("MPI does not have an ID for patient %s in domain %s",
-									this.m_patient.getId(), xrefDomain));
+									m_patient.getId(), xrefDomain));
 						}
 					} else if (pit == null)
 						log.warn(String.format("Identity domain %s has no local equivalent", xrefDomain));
