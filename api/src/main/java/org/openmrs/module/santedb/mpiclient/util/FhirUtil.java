@@ -608,7 +608,7 @@ public class FhirUtil {
 		personAttribute.setUuid(contactPoint.getId());
 		personAttribute.setValue(contactPoint.getValue());
 		personAttribute.setAttributeType(Context.getPersonService().getPersonAttributeTypeByUuid(
-				Context.getAdministrationService().getGlobalProperty(FhirConstants.PERSON_CONTACT_ATTRIBUTE_TYPE)));
+				Context.getAdministrationService().getGlobalProperty(FhirConstants.PERSON_CONTACT_POINT_ATTRIBUTE_TYPE)));
 		return  personAttribute;
 	}
 
