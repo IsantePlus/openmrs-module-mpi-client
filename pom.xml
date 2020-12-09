@@ -5,7 +5,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>santedb-mpiclient</artifactId>
-	<version>2.0.0-SNAPSHOT</version>
+	<version>1.0.1-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>OpenMRS MPI Client Module</name>
 	<description>Allows OpenMRS to interact with MPIs.</description>
@@ -123,6 +123,12 @@
 
 	<repositories>
 		<repository>
+			<id>isanteplus-github</id>
+			<name>Github iSantePlus Packages</name>
+			<url>https://maven.pkg.github.com/isanteplus/isanteplus-packages</url>
+			<snapshots><enabled>true</enabled></snapshots>
+		</repository>
+		<repository>
 			<id>dcm4che-repository</id>
 			<name>DCM4CHE Public Maven Repository</name>
 			<url>http://www.dcm4che.org/maven2</url>
@@ -165,9 +171,14 @@
 	<!-- Github Packages Integration -->
 	<distributionManagement>
 		<repository>
-			<id>github</id>
-			<name>GitHub Packages</name>
-			<url>https://maven.pkg.github.com/pmanko/openmrs-module-mpi-client</url>
+			<id>isanteplus-github</id>
+			<name>Github iSantePlus Packages</name>
+			<url>https://maven.pkg.github.com/isanteplus/isanteplus-packages</url>
 		</repository>
+		<snapshotRepository>
+			<id>isanteplus-github</id>
+			<name>Github iSantePlus Packages</name>
+			<url>https://maven.pkg.github.com/isanteplus/isanteplus-packages</url>
+		</snapshotRepository>
 	</distributionManagement>
 </project>
