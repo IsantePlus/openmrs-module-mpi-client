@@ -140,11 +140,6 @@
 			<url>http://mavenrepo.openmrs.org/nexus/content/repositories/public</url>
 		</repository>
 		<repository>
-			<id>marc-te</id>
-			<name>TECH EXCHANGE</name>
-			<url>http://te.marc-hi.ca/mvn</url>
-		</repository>
-		<repository>
 			<id>santesute-main</id>
 			<url>http://santesuite.org/mvn</url>
 			<name>SanteSuite</name>
@@ -197,6 +192,16 @@
 						<artifactId>maven-jar-plugin</artifactId>
 						<executions>
 							<execution>
+								<phase>none</phase>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-pmd-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>validate</id>
 								<phase>none</phase>
 							</execution>
 						</executions>
