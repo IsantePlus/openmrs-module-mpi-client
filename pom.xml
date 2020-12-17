@@ -5,7 +5,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>santedb-mpiclient</artifactId>
-	<version>1.0.-SNAPSHOT</version>
+	<version>1.0.4-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>OpenMRS MPI Client Module</name>
 	<description>Allows OpenMRS to interact with MPIs.</description>
@@ -74,7 +74,7 @@
 			<dependency>
 				<groupId>org.openmrs.module</groupId>
 				<artifactId>fhir2-api</artifactId>
-				<version>1.2.0-SNAPSHOT</version>
+				<version>1.2.1-SNAPSHOT</version>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
