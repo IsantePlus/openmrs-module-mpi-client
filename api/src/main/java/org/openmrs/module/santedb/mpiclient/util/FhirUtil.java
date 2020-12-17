@@ -375,10 +375,6 @@ public class FhirUtil {
 		Iterator identifierIterator = fhirPatient.getIdentifier().iterator();
 		while(identifierIterator.hasNext()) {
 			Identifier identifier = (Identifier)identifierIterator.next();
-//			Ignore Code ST IDs
-			if(identifier.hasType() && ("Code ST".equals(identifier.getType().getText()))){
-				continue;
-			}
 			PatientIdentifier patientIdentifier = IdentifierTranslator.translateIdentifier(identifier);
 			if(patientIdentifier != null){
 				patient.addIdentifier(patientIdentifier);
@@ -612,7 +608,7 @@ public class FhirUtil {
 		personAttribute.setUuid(contactPoint.getId());
 		personAttribute.setValue(contactPoint.getValue());
 		personAttribute.setAttributeType(Context.getPersonService().getPersonAttributeTypeByUuid(
-				Context.getAdministrationService().getGlobalProperty(FhirConstants.PERSON_CONTACT_POINT_ATTRIBUTE_TYPE)));
+				Context.getAdministrationService().getGlobalProperty(FhirConstants.PERSON_CONTACT_ATTRIBUTE_TYPE)));
 		return  personAttribute;
 	}
 
