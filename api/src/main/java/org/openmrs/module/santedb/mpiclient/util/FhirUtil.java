@@ -607,8 +607,9 @@ public class FhirUtil {
 		}
 		personAttribute.setUuid(contactPoint.getId());
 		personAttribute.setValue(contactPoint.getValue());
+		// TODO figure out why this was taken out of FhirConstants (PERSON_CONTACT_ATTRIBUTE_TYPE) in parent fork
 		personAttribute.setAttributeType(Context.getPersonService().getPersonAttributeTypeByUuid(
-				Context.getAdministrationService().getGlobalProperty(FhirConstants.PERSON_ATTRIBUTE_TYPE_VALUE)));
+				Context.getAdministrationService().getGlobalProperty("fhir2.personAttributeTypeUuid")));
 		return  personAttribute;
 	}
 
