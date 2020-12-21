@@ -17,6 +17,7 @@
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.dcm4che3.net.audit.AuditLogger;
 import org.openmrs.Patient;
@@ -37,7 +38,10 @@ public interface MpiClientWorker  {
 	 * @param patientSearchString
 	 * @return
 	 */
-	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate, String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,  PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException;
+	public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
+										  String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,
+										  PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace,
+										  Map<String, Object> otherDataPoints) throws MpiClientException;
 
 	/**
 	 * Searches for patients with the specified patient identity string 

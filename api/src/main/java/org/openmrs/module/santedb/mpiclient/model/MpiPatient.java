@@ -19,12 +19,7 @@ package org.openmrs.module.santedb.mpiclient.model;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.openmrs.Patient;
-import org.openmrs.PatientIdentifier;
-import org.openmrs.PersonAddress;
-import org.openmrs.PersonAttribute;
-import org.openmrs.PersonName;
-import org.openmrs.Relationship;
+import org.openmrs.*;
 
 /**
  * Represents temporary structure in memory to use for storing patient data
@@ -36,6 +31,7 @@ public class MpiPatient extends Patient {
 	
 	// Backing field for relationships
 	private List<Relationship> m_relationships = new ArrayList<Relationship>();
+	private List<Obs> patientObservations = new ArrayList<>();
 
 	private String sourceLocation;
 	
@@ -59,6 +55,14 @@ public class MpiPatient extends Patient {
 
 	public void setSourceLocation(String sourceLocation) {
 		this.sourceLocation = sourceLocation;
+	}
+
+	public List<Obs> getPatientObservations() {
+		return patientObservations;
+	}
+
+	public void addPatientObservation(Obs obs) {
+		this.patientObservations.add(obs);
 	}
 
 	/**
