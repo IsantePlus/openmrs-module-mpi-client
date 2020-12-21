@@ -246,7 +246,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
         if (StringUtils.isNotBlank(localBiometricSubjectId)) {
             query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
-                        .systemAndIdentifier(localBiometricSubjectId, "Biometrics Reference Code"));
+                    .systemAndIdentifier(localBiometricSubjectId, "Biometrics Reference Code"));
         }
         if (StringUtils.isNotBlank(nationalBiometricSubjectId)) {
             query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()

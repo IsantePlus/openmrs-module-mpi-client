@@ -1,13 +1,13 @@
 /**
  * Portions Copyright 2015-2018 Mohawk College of Applied Arts and Technology
  * Portions Copyright (c) 2014-2020 Fyfe Software Inc.
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you 
  * may not use this file except in compliance with the License. You may 
  * obtain a copy of the License at 
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
@@ -28,19 +28,19 @@ import org.openmrs.*;
  */
 public class MpiPatient extends Patient {
 
-	
+
 	// Backing field for relationships
 	private List<Relationship> m_relationships = new ArrayList<Relationship>();
 	private List<Obs> patientObservations = new ArrayList<>();
 
 	private String sourceLocation;
-	
+
 	/**
 	 * Get relationships of the patient
 	 * @return
 	 */
 	public List<Relationship> getRelationships() { return this.m_relationships; }
-	
+
 	/**
 	 * Add a relationship to the patient
 	 * @param relationship
@@ -83,7 +83,7 @@ public class MpiPatient extends Patient {
 		for(PersonAttribute pa : this.getAttributes())
 			pa.setPerson(retVal);
 		retVal.setAttributes(this.getAttributes());
-		
+
 		retVal.setDeathDate(this.getDeathDate());
 		retVal.setGender(this.getGender());
 		retVal.setBirthdateEstimated(this.getBirthdateEstimated());
