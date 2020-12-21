@@ -26,6 +26,7 @@ import org.openmrs.Patient;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
+import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.springframework.aop.AfterReturningAdvice;
 
 /**
@@ -47,12 +48,13 @@ public class PatientSynchronizationAdvice implements AfterReturningAdvice {
 		
 		if(method.getName().equals("savePatient") && target instanceof PatientService)
 		{
-			PatientUpdateWorker worker = new PatientUpdateWorker((Patient)returnValue, Context.getUserContext());
+			MpiPatientExport patientExport = new MpiPatientExport((Patient)returnValue,null,null,null,null);
+			PatientUpdateWorker worker = new PatientUpdateWorker(patientExport, Context.getUserContext());
 			worker.start();
 		}
 		else if(method.getName().equals("getPatient"))
 		{
-			PatientSyncWorker worker = new PatientSyncWorker(((Patient)returnValue).getUuid(), Context.getUserContext());
+			PatientSyncWorker worker = new PatientSyncWorker(((Patient)returnValue), Context.getUserContext());
 			worker.start();
 		}
 		else if(method.getName().equals("saveGlobalProperty"))

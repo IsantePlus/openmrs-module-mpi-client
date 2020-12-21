@@ -17,14 +17,11 @@
 package org.openmrs.module.santedb.mpiclient.model;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import org.openmrs.Patient;
-import org.openmrs.PatientIdentifier;
-import org.openmrs.PersonAddress;
-import org.openmrs.PersonAttribute;
-import org.openmrs.PersonName;
-import org.openmrs.Relationship;
+import org.openmrs.*;
 
 /**
  * Represents temporary structure in memory to use for storing patient data
@@ -35,46 +32,77 @@ public class MpiPatient extends Patient {
 
 	
 	// Backing field for relationships
-	private List<Relationship> m_relationships = new ArrayList<Relationship>();
+	private List<Relationship> relationships = new ArrayList<>();
+	private Set<Obs> 	patientObservations = new HashSet<>();
+
+	private String sourceLocation;
 	
 	/**
 	 * Get relationships of the patient
 	 * @return
 	 */
-	public List<Relationship> getRelationships() { return this.m_relationships; }
+	public List<Relationship> getRelationships() { return this.relationships; }
 	
 	/**
 	 * Add a relationship to the patient
 	 * @param relationship
 	 */
 	public void addRelationship(Relationship relationship) {
-		this.m_relationships.add(relationship);
+		this.relationships.add(relationship);
 	}
-	
+
+	public String getSourceLocation() {
+		return sourceLocation;
+	}
+
+	public void setSourceLocation(String sourceLocation) {
+		this.sourceLocation = sourceLocation;
+	}
+
+	public Set<Obs> getPatientObservations() {
+		return patientObservations;
+	}
+
+	public void addPatientObservation(Obs obs) {
+		this.patientObservations.add(obs);
+	}
+
 	/**
 	 * Convert this MpiPatient to an actual patient
 	 */
 	public Patient toPatient() {
 
 		Patient retVal = new Patient();
-		for(PersonAddress pa : this.getAddresses())
+		for(PersonAddress pa : this.getAddresses()){
 			pa.setPerson(retVal);
+			pa.setUuid(null);
+			pa.setId(null);
+		}
 		retVal.setAddresses(this.getAddresses());
-		for(PersonName pn : this.getNames())
+		for(PersonName pn : this.getNames()){
 			pn.setPerson(retVal);
+			pn.setUuid(null);
+			pn.setId(null);
+		}
 		retVal.setNames(this.getNames());
-		for(PatientIdentifier pi : this.getIdentifiers())
+		for(PatientIdentifier pi : this.getIdentifiers()){
 			pi.setPatient(retVal);
+			pi.setUuid(null);
+			pi.setId(null);
+		}
 		retVal.setIdentifiers(this.getIdentifiers());
-		for(PersonAttribute pa : this.getAttributes())
+		for(PersonAttribute pa : this.getAttributes()){
 			pa.setPerson(retVal);
+			pa.setUuid(null);
+			pa.setId(null);
+		}
 		retVal.setAttributes(this.getAttributes());
 		
 		retVal.setDeathDate(this.getDeathDate());
 		retVal.setGender(this.getGender());
 		retVal.setBirthdateEstimated(this.getBirthdateEstimated());
 		retVal.setBirthdate(this.getBirthdate());
-		retVal.setAttributes(this.getAttributes());
+//		retVal.setAttributes(this.getAttributes());
 		retVal.setDead(this.getDead());
 		return retVal;
 	}
