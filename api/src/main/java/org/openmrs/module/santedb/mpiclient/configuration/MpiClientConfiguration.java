@@ -411,6 +411,8 @@ public class MpiClientConfiguration {
 
 	private static final String PROP_NAME_MOTHERS_ATTRIBUTE_NAME = "mpi-client.reg.mothersName";
 
+	private static final String PROP_NAME_BIRTHPLACE_ATTRIBUTE_NAME = "mpi-client.reg.birthPlace";
+
 	private static final String PROP_NAME_PATIENT_TELEPHONE_ATTRIBUTE_NAME = "mpi-client.reg.patientTelephoneNumber";
 
 	public String getRegistrationConceptUuid() {
@@ -447,5 +449,9 @@ public class MpiClientConfiguration {
 
 	public String getPatientTelephoneAttribute() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_PATIENT_TELEPHONE_ATTRIBUTE_NAME, "Telephone Number");
+	}
+
+	public String getBirthPlaceAttributeName() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_BIRTHPLACE_ATTRIBUTE_NAME, "Birthplace");
 	}
 }
