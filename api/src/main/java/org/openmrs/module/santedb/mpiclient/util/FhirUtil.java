@@ -1,13 +1,13 @@
 /**
  * Portions Copyright 2015-2018 Mohawk College of Applied Arts and Technology
  * Portions Copyright (c) 2014-2020 Fyfe Software Inc.
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you 
  * may not use this file except in compliance with the License. You may 
  * obtain a copy of the License at 
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
@@ -16,7 +16,6 @@
  */
 package org.openmrs.module.santedb.mpiclient.util;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -46,7 +45,7 @@ import static org.apache.commons.lang3.Validate.notNull;
 
 
 public class FhirUtil {
-	
+
 	private final Log log = LogFactory.getLog(this.getClass());
 
 	// locking object
@@ -78,7 +77,7 @@ public class FhirUtil {
 
 	/**
 	 * Update the specified FHIR identifier
-	 * 
+	 *
 	 * @param fhirIdentifier    The FHIR identifier to be updated
 	 * @param patientIdentifier The patient identifier to be mapped
 	 * @param domain            The domain in which the identifier belongs
@@ -99,7 +98,7 @@ public class FhirUtil {
 
 	/**
 	 * Interpret the XAD as a person address
-	 * 
+	 *
 	 * @return
 	 */
 	private PersonAddress interpretFhirAddress(Address addr) {
@@ -128,10 +127,10 @@ public class FhirUtil {
 
 		return pa;
 	}
-	
+
 	/**
 	 * Interpret the CX ID as a patient Identifier
-	 * 
+	 *
 	 * @param id
 	 */
 	private PatientIdentifier interpretFhirId(Identifier id) {
@@ -152,7 +151,7 @@ public class FhirUtil {
 			}
 		}
 
-		// No map, so we should try lookup by the original system provided 
+		// No map, so we should try lookup by the original system provided
 		if (pit == null) {
 			pit = Context.getPatientService().getPatientIdentifierTypeByName(domain);
 		}
@@ -171,10 +170,10 @@ public class FhirUtil {
 
 		return patId;
 	}
-	
+
 	/**
 	 * Updates the provided fhir name with the person name
-	 * 
+	 *
 	 * @param name The name to be updated with the contents of pn
 	 * @param pn   The person name to convert
 	 */
@@ -202,7 +201,7 @@ public class FhirUtil {
 
 	/**
 	 * Interpret the FHIR HumanName as a Patient Name
-	 * 
+	 *
 	 * @return The interpreted name
 	 */
 	private PersonName interpretFhirName(HumanName name) {
@@ -234,7 +233,7 @@ public class FhirUtil {
 
 	/**
 	 * Updates the specified HL7v2 address
-	 * 
+	 *
 	 * @param pa
 	 * @throws DataTypeException
 	 */
@@ -364,7 +363,7 @@ public class FhirUtil {
 		notNull(fhirPatient, "The Patient object should not be null");
 
 //		Set UUID
-//		patient.setUuid(fhirPatient.getId());
+		patient.setUuid(fhirPatient.getId());
 
 
 
@@ -372,6 +371,10 @@ public class FhirUtil {
 		Iterator identifierIterator = fhirPatient.getIdentifier().iterator();
 		while(identifierIterator.hasNext()) {
 			Identifier identifier = (Identifier)identifierIterator.next();
+//			Ignore Code ST IDs
+			if(identifier.hasType() && ("Code ST".equals(identifier.getType().getText()))){
+				continue;
+			}
 			PatientIdentifier patientIdentifier = IdentifierTranslator.translateIdentifier(identifier);
 			if(patientIdentifier != null){
 				patient.addIdentifier(patientIdentifier);
@@ -380,7 +383,7 @@ public class FhirUtil {
 		}
 
 
-		// Enterprise root? 
+		// Enterprise root?
 		if(null != this.m_configuration.getEnterprisePatientIdRoot() && !this.m_configuration.getEnterprisePatientIdRoot().isEmpty())
 		{
 			Identifier fhirSysId = new Identifier();
@@ -392,7 +395,7 @@ public class FhirUtil {
 				patient.addIdentifier(sysId);
 			}
 		}
-		
+
 		// Attempt to copy names
 		for (HumanName name : fhirPatient.getName()) {
 			PersonName pn = this.interpretFhirName(name);
@@ -404,7 +407,7 @@ public class FhirUtil {
 			patient.setGender("F");
 		else if(AdministrativeGender.MALE.equals(fhirPatient.getGender()))
 			patient.setGender("M");
-		else 
+		else
 			patient.setGender("U");
 
 		// Copy DOB
@@ -428,7 +431,7 @@ public class FhirUtil {
 			}
 			catch (FHIRException ignored) {}
 		}
-		
+
 		// Addresses
 		for (Address addr : fhirPatient.getAddress()) {
 			// Skip bad addresses
@@ -442,37 +445,6 @@ public class FhirUtil {
 //		Patient Telephone
 		fhirPatient.getTelecom().stream().map(contactPoint -> translateTelecom(contactPoint)).distinct().filter(Objects::nonNull).forEach(patient::addAttribute);
 
-//		Birth Location
-		Extension patientBirthPlace = fhirPatient.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/patient-birthPlace");
-		if(patientBirthPlace != null){
-			Address birthPlaceAddress = (Address) patientBirthPlace.getValue();
-			Obs obs = null;
-			try {
-				obs = translateAddressComponent(birthPlaceAddress);
-				if (obs != null) {
-					patient.addPatientObservation(obs);
-				}
-			} catch (ParseException e) {
-				e.printStackTrace();
-			}
-		}
-
-
-//		Patient Contacts
-		for (ContactComponent contactComponent : fhirPatient.getContact()) {
-			Obs obs = null;
-			try {
-				obs = translateContactComponent(contactComponent);
-				if (obs != null) {
-					patient.addPatientObservation(obs);
-				}
-			} catch (ParseException e) {
-				e.printStackTrace();
-			}
-		}
-
-
-
 //		Source Location
 		Identifier identifierFirstRep = fhirPatient.getIdentifierFirstRep();
 		if(identifierFirstRep.hasExtension("http://fhir.openmrs.org/ext/patient/identifier#location")){
@@ -481,17 +453,13 @@ public class FhirUtil {
 			patient.setSourceLocation(value.getDisplay());
 		}
 
-//		Mother's maiden name
+//		parse mothers maiden
 		Extension mothersMaidenName = fhirPatient.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
 		if(mothersMaidenName != null){
 			org.openmrs.PersonAttributeType attributeType = Context.getPersonService().getPersonAttributeTypeByName(m_configuration.getMothersAttributeName());
-			org.openmrs.PersonAttribute attribute = new org.openmrs.PersonAttribute(attributeType,((StringType)mothersMaidenName.getValue()).getValue());
+			org.openmrs.PersonAttribute attribute = new org.openmrs.PersonAttribute(attributeType,mothersMaidenName.getValue().toString());
 			patient.addAttribute(attribute);
 		}
-
-
-
-
 
 		Extension birthPlaceExtension = fhirPatient.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/patient-birthPlace");
 		if(birthPlaceExtension != null){
@@ -503,134 +471,79 @@ public class FhirUtil {
 
 		return patient;
 	}
-	private Obs translateAddressComponent(Address birthPlaceAddress) throws ParseException {
 
+
+
+	private org.openmrs.Obs translateBirthPlace(Address address) {
 		ConceptService conceptService = Context.getConceptService();
-		org.openmrs.Location defaultLocation = Context.getLocationService().getDefaultLocation();
 		org.openmrs.Obs parent = new  org.openmrs.Obs();
 		Set<org.openmrs.Obs> contactMembers = new HashSet<>();
 
-//		Set type
-		parent.setConcept(conceptService.getConceptByUuid("165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
-
+		parent.setConcept(conceptService.getConcept(165194));
 //		Set location
-		parent.setLocation(defaultLocation);
+		parent.setLocation(Context.getUserContext().getLocation());
 
-//		Process City
-		org.openmrs.Obs obs;
-		String city = birthPlaceAddress.getCity();
+		org.openmrs.Obs obs =   null;
+
+		String city = address.getCity();
 		obs = new org.openmrs.Obs();
 		obs.setConcept(conceptService.getConcept(1354));
-		obs.setValueAsString(String.valueOf(city));
-		obs.setLocation(defaultLocation);
-		obs.setObsDatetime(new Date());
+		obs.setValueText(String.valueOf(city));
 		contactMembers.add(obs);
 
 
 
-		String state = birthPlaceAddress.getState();
+		String state = address.getState();
 		obs = new org.openmrs.Obs();
 		obs.setConcept(conceptService.getConcept(165197));
-		obs.setValueAsString(String.valueOf(state));
-		obs.setLocation(defaultLocation);
-		obs.setObsDatetime(new Date());
+		obs.setValueText(String.valueOf(state));
 		contactMembers.add(obs);
 
 
-		String country = birthPlaceAddress.getCountry();
+		String country = address.getCountry();
 //			165198
 		obs = new org.openmrs.Obs();
 		obs.setConcept(conceptService.getConcept(165198));
-		obs.setValueAsString(String.valueOf(country));
-		obs.setLocation(defaultLocation);
-		obs.setObsDatetime(new Date());
+		obs.setValueText(String.valueOf(country));
 		contactMembers.add(obs);
 
-		Iterator<Extension> iterator = birthPlaceAddress.getExtension().iterator();
+		Iterator<Extension> iterator = address.getExtension().iterator();
 
 		while (iterator.hasNext()){
 			Extension nextExtension = iterator.next();
-			processAddressExtension(conceptService, contactMembers, nextExtension);
+			switch (nextExtension.getUrl()){
+				case "Address Text": {
+					processAddressExtension(conceptService, contactMembers, nextExtension);
+				}
+				case "Communal section": {
+					processAddressExtension(conceptService, contactMembers, nextExtension);
+					break;
+				}
+				case "Locality": {
+					processAddressExtension(conceptService, contactMembers, nextExtension);
+				}
+			}
 		}
+
+
 
 		parent.setGroupMembers(contactMembers);
 
 
 		return parent;
+
 	}
-
-	public ContactComponent translatePatientContact(Obs patientOb) {
-//		Process patient contact -
-        ContactComponent contactComponent = new ContactComponent();
-        Set<Obs> contactMembers = patientOb.getGroupMembers(false);
-        for (Obs cm : contactMembers) {
-//			TODO move to global peroperties and use UUID instead
-            if (cm.getConcept().getConceptId() == 163258) {
-//				Process contact name
-                HumanName contactName = new HumanName();
-                String[] names = cm.getValueText().split(" ");
-
-                if (names.length > 1) {
-                    contactName.setFamily(names[1]);
-                    List<StringType> ns = new ArrayList<StringType>() {{
-                        add(new StringType(names[0]));
-                    }};
-                    contactName.setGiven(ns);
-                } else if (names.length == 1) {
-                    contactName.setFamily(names[0]);
-                }
-                contactComponent.setName(contactName);
-            } else if (cm.getConcept().getConceptId() == 159635) {
-//				Process contact's phone number
-                ContactPoint telco = new ContactPoint();
-                telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
-                telco.setValue(cm.getValueText());
-                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
-                    add(telco);
-                }};
-                contactPoints.add(telco);
-                contactComponent.setTelecom(contactPoints);
-            } else if (cm.getConcept().getConceptId() == 164352) {
-//            	Process relationship to patient
-                CodeableConcept concept = new CodeableConcept();
-                concept.setText(cm.getValueCodedName().getName());
-                contactComponent.addRelationship(concept);
-
-            } else if (cm.getConcept().getConceptId() == 164958) {
-//            	Wrong mapping for address
-
-            }
-        }
-        return contactComponent;
-    }
-
-    public org.openmrs.PersonAttribute translateTelecom(ContactPoint contactPoint){
-		org.openmrs.PersonAttribute personAttribute = new org.openmrs.PersonAttribute();
-		if (contactPoint == null) {
-			return personAttribute;
-		}
-		personAttribute.setUuid(contactPoint.getId());
-		personAttribute.setValue(contactPoint.getValue());
-		// TODO figure out why this was taken out of FhirConstants (PERSON_CONTACT_ATTRIBUTE_TYPE) in parent fork
-		personAttribute.setAttributeType(Context.getPersonService().getPersonAttributeTypeByUuid(
-				Context.getAdministrationService().getGlobalProperty("fhir2.personAttributeTypeUuid")));
-		return  personAttribute;
-	}
-
-
-	private org.openmrs.Obs translateContactComponent(ContactComponent contactComponent) throws ParseException {
+	private org.openmrs.Obs translateContactComponent(ContactComponent contactComponent) {
 		ConceptService conceptService = Context.getConceptService();
-		org.openmrs.Location defaultLocation = Context.getLocationService().getDefaultLocation();
 		org.openmrs.Obs parent = new  org.openmrs.Obs();
 		Set<org.openmrs.Obs> contactMembers = new HashSet<>();
 
 //		Set type
-		Reference organization = contactComponent.getOrganization();
-		if(organization != null){
-			parent.setConcept(conceptService.getConceptByName(organization.getDisplay()));
+		if(contactComponent.getNamedProperty("type") != null){
+			parent.setConcept(conceptService.getConceptByName(String.valueOf(contactComponent.getNamedProperty("type").getValues().get(0))));
 		}
 //		Set location
-		parent.setLocation(defaultLocation);
+		parent.setLocation(Context.getUserContext().getLocation());
 
 //		set name
 		if(contactComponent.hasName()){
@@ -643,9 +556,7 @@ public class FhirUtil {
 				contactName += humanName.getFamily();
 				org.openmrs.Obs nameObs = new org.openmrs.Obs();
 				nameObs.setConcept(conceptService.getConcept(163258));
-				nameObs.setValueAsString(contactName);
-				nameObs.setLocation(defaultLocation);
-				nameObs.setObsDatetime(new Date());
+				nameObs.setValueText(contactName);
 				contactMembers.add(nameObs);
 			}
 		}
@@ -656,9 +567,7 @@ public class FhirUtil {
 			ContactPoint telecomComponent = contactComponent.getTelecomFirstRep();
 			org.openmrs.Obs telecomObs = new org.openmrs.Obs();
 			telecomObs.setConcept(conceptService.getConcept(159635));
-			telecomObs.setValueAsString(telecomComponent.getValue());
-			telecomObs.setLocation(defaultLocation);
-			telecomObs.setObsDatetime(new Date());
+			telecomObs.setValueText(telecomComponent.getValue());
 			contactMembers.add(telecomObs);
 		}
 
@@ -668,21 +577,18 @@ public class FhirUtil {
 			org.openmrs.Obs relationshipObs = new org.openmrs.Obs();
 			relationshipObs.setConcept(conceptService.getConcept(164352));
 			relationshipObs.setValueCoded(conceptService.getConceptByName(patientRelationship.getText()));
-			relationshipObs.setLocation(defaultLocation);
-			relationshipObs.setObsDatetime(new Date());
 			contactMembers.add(relationshipObs);
 		}
 
 //		Process contact address
 		if(contactComponent.hasAddress()){
-			org.openmrs.Obs obs;
+			org.openmrs.Obs obs =   null;
 			Address contactAddress = contactComponent.getAddress();
+
 			String city = contactAddress.getCity();
 			obs = new org.openmrs.Obs();
 			obs.setConcept(conceptService.getConcept(1354));
-			obs.setValueAsString(String.valueOf(city));
-			obs.setLocation(defaultLocation);
-			obs.setObsDatetime(new Date());
+			obs.setValueText(String.valueOf(city));
 			contactMembers.add(obs);
 
 
@@ -690,9 +596,7 @@ public class FhirUtil {
 			String state = contactAddress.getState();
 			obs = new org.openmrs.Obs();
 			obs.setConcept(conceptService.getConcept(165197));
-			obs.setValueAsString(String.valueOf(state));
-			obs.setLocation(defaultLocation);
-			obs.setObsDatetime(new Date());
+			obs.setValueText(String.valueOf(state));
 			contactMembers.add(obs);
 
 
@@ -700,16 +604,25 @@ public class FhirUtil {
 //			165198
 			obs = new org.openmrs.Obs();
 			obs.setConcept(conceptService.getConcept(165198));
-			obs.setValueAsString(String.valueOf(country));
-			obs.setLocation(defaultLocation);
-			obs.setObsDatetime(new Date());
+			obs.setValueText(String.valueOf(country));
 			contactMembers.add(obs);
 
 			Iterator<Extension> iterator = contactAddress.getExtension().iterator();
 
 			while (iterator.hasNext()){
 				Extension nextExtension = iterator.next();
-				processAddressExtension(conceptService, contactMembers, nextExtension);
+				switch (nextExtension.getUrl()){
+					case "Address Text": {
+						processAddressExtension(conceptService, contactMembers, nextExtension);
+					}
+					case "Communal section": {
+						processAddressExtension(conceptService, contactMembers, nextExtension);
+						break;
+					}
+					case "Locality": {
+						processAddressExtension(conceptService, contactMembers, nextExtension);
+					}
+				}
 			}
 
 		}
@@ -721,32 +634,67 @@ public class FhirUtil {
 
 	}
 
-	private void processAddressExtension(ConceptService conceptService, Set<Obs> contactMembers, Extension nextExtension) throws ParseException {
+	private void processAddressExtension(ConceptService conceptService, Set<Obs> contactMembers, Extension nextExtension) {
 		Obs obs = new Obs();
-		org.openmrs.Concept obsConcept = null;
-		switch (nextExtension.getUrl()){
-			case "Communal section": {
-				obsConcept = conceptService.getConcept(165196);
-				break;
-			}
-			case "Locality": {
-				obsConcept = conceptService.getConcept(165195);
-				break;
-			}
-			case "Address Text": {
-				obsConcept = conceptService.getConcept(162725);
-				break;
-			}
-		}
-		if(obsConcept!=null){
-			obs.setConcept(obsConcept);
-			obs.setValueAsString(String.valueOf(nextExtension.getValue()));
-			obs.setLocation(Context.getLocationService().getDefaultLocation());
-			obs.setObsDatetime(new Date());
-			contactMembers.add(obs);
-		}else{
-//			Not processed given concept is missing
+		obs.setConcept(conceptService.getConceptByName(nextExtension.getUrl()));
+		obs.setValueText(String.valueOf(nextExtension.getValue()));
+		contactMembers.add(obs);
+	}
 
+	public ContactComponent translatePatientContact(Obs patientOb) {
+//		Process patient contact -
+		ContactComponent contactComponent = new ContactComponent();
+		Set<Obs> contactMembers = patientOb.getGroupMembers(false);
+		for (Obs cm : contactMembers) {
+//			TODO move to global peroperties and use UUID instead
+			if (cm.getConcept().getConceptId() == 163258) {
+//				Process contact name
+				HumanName contactName = new HumanName();
+				String[] names = cm.getValueText().split(" ");
+
+				if (names.length > 1) {
+					contactName.setFamily(names[1]);
+					List<StringType> ns = new ArrayList<StringType>() {{
+						add(new StringType(names[0]));
+					}};
+					contactName.setGiven(ns);
+				} else if (names.length == 1) {
+					contactName.setFamily(names[0]);
+				}
+				contactComponent.setName(contactName);
+			} else if (cm.getConcept().getConceptId() == 159635) {
+//				Process contact's phone number
+				ContactPoint telco = new ContactPoint();
+				telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
+				telco.setValue(cm.getValueText());
+				List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
+					add(telco);
+				}};
+				contactPoints.add(telco);
+				contactComponent.setTelecom(contactPoints);
+			} else if (cm.getConcept().getConceptId() == 164352) {
+//            	Process relationship to patient
+				CodeableConcept concept = new CodeableConcept();
+				concept.setText(cm.getValueCodedName().getName());
+				contactComponent.addRelationship(concept);
+
+			} else if (cm.getConcept().getConceptId() == 164958) {
+//            	Wrong mapping for address
+
+			}
 		}
+		return contactComponent;
+	}
+
+	public org.openmrs.PersonAttribute translateTelecom(ContactPoint contactPoint){
+		org.openmrs.PersonAttribute personAttribute = new org.openmrs.PersonAttribute();
+		if (contactPoint == null) {
+			return personAttribute;
+		}
+		personAttribute.setUuid(contactPoint.getId());
+		personAttribute.setValue(contactPoint.getValue());
+		personAttribute.setAttributeType(Context.getPersonService().getPersonAttributeTypeByUuid(
+				Context.getAdministrationService().getGlobalProperty(FhirConstants.PERSON_CONTACT_POINT_ATTRIBUTE_TYPE)));
+		return  personAttribute;
 	}
 }
