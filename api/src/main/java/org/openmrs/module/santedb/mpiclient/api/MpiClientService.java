@@ -55,7 +55,7 @@ public interface MpiClientService extends OpenmrsService {
 	public List<MpiPatient> searchPatient(Patient patient, Map<String, Object> otherDataPoints) throws MpiClientException;
 
 	/**
-	 * Searches for patients with the specified patient identity string 
+	 * Searches for patients with the specified patient identity string
 	 */
 	public MpiPatient getPatient(String identifier, String assigningAuthority) throws MpiClientException;
 	
