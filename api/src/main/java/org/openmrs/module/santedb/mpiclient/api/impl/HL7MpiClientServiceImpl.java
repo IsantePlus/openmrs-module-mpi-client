@@ -99,7 +99,7 @@ public class HL7MpiClientServiceImpl
 			PatientIdentifier identifier,
 			PatientIdentifier mothersIdentifier,
 			String nextOfKinName,
-			String birthplace) throws MpiClientException {
+			String birthplace,Map<String, Object> otherDataPoints) throws MpiClientException {
 
 		Map<String, String> queryParams = new HashMap<String, String>();
 		if(familyName != null && !familyName.isEmpty())

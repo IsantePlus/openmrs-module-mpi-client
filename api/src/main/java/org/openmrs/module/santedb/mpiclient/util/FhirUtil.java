@@ -22,7 +22,6 @@ import java.util.*;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.DataTypeException;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.hl7.fhir.exceptions.FHIRException;
@@ -40,8 +39,6 @@ import org.openmrs.PersonName;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.api.translators.TelecomTranslator;
-import org.openmrs.module.fhir2.api.translators.impl.TelecomTranslatorImpl;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
 
@@ -499,6 +496,14 @@ public class FhirUtil {
 
 
 
+
+		Extension birthPlaceExtension = fhirPatient.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/patient-birthPlace");
+		if(birthPlaceExtension != null){
+			Address birthAddress = (Address)birthPlaceExtension.getValue();
+			Obs obs = translateBirthPlace(birthAddress);
+			patient.addPatientObservation(obs);
+		}
+		fhirPatient.getContact().stream().map(contactComponent -> translateContactComponent(contactComponent)).distinct().filter(Objects::nonNull).forEach(patient::addPatientObservation);
 
 		return patient;
 	}
