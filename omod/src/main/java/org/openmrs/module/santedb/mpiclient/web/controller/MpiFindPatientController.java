@@ -43,32 +43,32 @@ public class MpiFindPatientController {
 	public void index(ModelMap model) {
 		model.put("patientSearch", new PatientSearchModel());
 	}
-	
+
 	/**
 	 * Handle the post
-	 * @return 
-	 * @throws ParseException 
+	 * @return
+	 * @throws ParseException
 	 */
 	@RequestMapping(method = RequestMethod.POST)
 	public ModelAndView doSearch(Map<String, Object> model, @ModelAttribute("patientSearch") PatientSearchModel search) throws ParseException
 	{
-		
+
 		try {
-			
+
 			// Service for the HIE
 			MpiClientService service = Context.getService(MpiClientService.class);
 			Date dobDate = null;
 			boolean isFuzzy = false;
 			PatientIdentifier identifier = null,
 					momsIdentifier = null;
-			
+
 			// Date format
 			if(search.getDateOfBirth() != null && !search.getDateOfBirth().isEmpty())
 			{
 				dobDate = new SimpleDateFormat("yyyyMMdd".substring(0, search.getDateOfBirth().length())).parse(search.getDateOfBirth());
 				isFuzzy = search.getDateOfBirth().length() < 8;
 				log.warn(String.format("Using search parameter for date: %s", dobDate.toString()));
-				
+
 			}
 			if(search.getIdentifier() != null && !search.getIdentifier().isEmpty())
 			{
@@ -76,20 +76,20 @@ public class MpiFindPatientController {
 					momsIdentifier = new PatientIdentifier(search.getIdentifier(), null, null);
 				else
 					identifier = new PatientIdentifier(search.getIdentifier(), null, null);
-				
+
 			}
-			
-			List<MpiPatient> results = service.searchPatient(search.getFamilyName(), search.getGivenName(), dobDate, isFuzzy, search.getGender(), null, search.getAddress(),  identifier, momsIdentifier, search.getRelativeName(), search.getBirthPlace());
+
+			List<MpiPatient> results = service.searchPatient(search.getFamilyName(), search.getGivenName(), dobDate, isFuzzy, search.getGender(), null, search.getAddress(),  identifier, momsIdentifier, search.getRelativeName(), search.getBirthPlace(),null);
 			List<PatientResultModel> modelResult = new ArrayList<PatientResultModel>();
 			for(MpiPatient result : results) {
 				modelResult.add(new PatientResultModel(result));
 			}
-			
+
 			model.put("successful", true);
 			model.put("hasResults", modelResult.size() > 0);
 			model.put("results", modelResult);
 			model.put("patientSearch", search);
-			
+
 			return new ModelAndView("/module/santedb-mpiclient/mpiFindPatient", model);
 		} catch (MpiClientException e) {
 			// TODO Auto-generated catch block
@@ -98,7 +98,7 @@ public class MpiFindPatientController {
 			model.put("error", e.getMessage());
 			return new ModelAndView("/module/santedb-mpiclient/mpiFindPatient", model);
 		}
-		
+
 	}
-	
+
 }
