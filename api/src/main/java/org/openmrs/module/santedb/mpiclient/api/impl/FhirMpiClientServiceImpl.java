@@ -197,8 +197,18 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         Set<PatientIdentifier> patientIdentifiers = new HashSet<>();
         patientIdentifiers.add(patientIdentifier);
 
-        IQuery<IBaseBundle> query = loadSearchQuery(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship,
+        return searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship,
                 patientIdentifiers, mothersIdentifier, nextOfKinName, birthPlace, otherDataPoints);
+    }
+
+    @Override
+    public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate, String gender,
+                                          String stateOrRegion, String cityOrTownship, Set<PatientIdentifier> patientIdentifiers,
+                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace,
+                                          Map<String, Object> otherDataPoints) throws MpiClientException {
+
+        IQuery<IBaseBundle> query = loadSearchQuery(familyName, givenName, dateOfBirth, fuzzyDate, gender,
+                stateOrRegion, cityOrTownship, patientIdentifiers, mothersIdentifier, nextOfKinName, birthPlace, otherDataPoints);
 
         // Send the message and construct the result set
         return getMpiPatientMatches(query);
@@ -301,18 +311,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         return query;
     }
 
-    @Override
-    public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate, String gender,
-                                          String stateOrRegion, String cityOrTownship, Set<PatientIdentifier> patientIdentifiers,
-                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace,
-                                          Map<String, Object> otherDataPoints) throws MpiClientException {
-
-        IQuery<IBaseBundle> query = loadSearchQuery(familyName, givenName, dateOfBirth, fuzzyDate, gender,
-                stateOrRegion, cityOrTownship, patientIdentifiers, mothersIdentifier, nextOfKinName, birthPlace, otherDataPoints);
-        // Send the message and construct the result set
-        return getMpiPatientMatches(query);
-
-    }
 
     /**
      * Retrieves a specific patient from the MPI given their identifier
@@ -558,7 +556,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
         Address address = parseAddress(patientOb);
         contactComponent.setAddress(address);
-        contactComponent.setProperty("type", new StringType(patientOb.getConcept().getName().getName()));
 
         Reference reference = new Reference();
         reference.setDisplay(patientOb.getConcept().getName().getName());

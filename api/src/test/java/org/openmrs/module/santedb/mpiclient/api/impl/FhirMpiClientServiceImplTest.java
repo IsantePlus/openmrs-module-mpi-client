@@ -10,7 +10,13 @@ public class FhirMpiClientServiceImplTest {
 	}
 
 	@Test
-	public void searchPatient() {
+	public void searchPatient_shouldReturnPatientForSingleIdentifier() {
+
+	}
+
+	@Test
+	public void searchPatient_shouldReturnPatientForIdentifierSet() {
+
 	}
 
 	@Test
