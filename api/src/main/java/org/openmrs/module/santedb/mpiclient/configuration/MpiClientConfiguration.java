@@ -244,7 +244,7 @@ public class MpiClientConfiguration {
 
 		if(this.m_localIdentifierMap == null) {
 			String exportType = this.getOrCreateGlobalProperty(PROP_NAME_ID_EXPORT_TYPE, "");
-			this.m_localIdentifierMap = new HashMap<String, String>();
+			this.m_localIdentifierMap = new HashMap<>();
 			if(exportType != null && !exportType.isEmpty())
 				for(String st : exportType.split(","))
 				{

@@ -18,6 +18,7 @@ package org.openmrs.module.santedb.mpiclient.api.impl;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -76,28 +77,28 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
     @Override
     public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
                                           String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,
-                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException {
+                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace, Map<String, Object> otherDataPoints) throws MpiClientException {
         if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
-            return this.m_fhirService.searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship, patientIdentifier, mothersIdentifier, nextOfKinName, birthPlace);
+            return this.m_fhirService.searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship, patientIdentifier, mothersIdentifier, nextOfKinName, birthPlace,otherDataPoints);
         else
-            return this.m_hl7Service.searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship, patientIdentifier, mothersIdentifier, nextOfKinName, birthPlace);
+            return this.m_hl7Service.searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship, patientIdentifier, mothersIdentifier, nextOfKinName, birthPlace,otherDataPoints);
 
     }
 
     @Override
-    public List<MpiPatient> searchPatient(Patient patient) throws MpiClientException {
+    public List<MpiPatient> searchPatient(Patient patient, Map<String, Object> otherDataPoints) throws MpiClientException {
         if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
             return this.m_fhirService.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
                     patient.getBirthdateEstimated(), patient.getGender(),
                     patient.getPersonAddress()!= null?patient.getPersonAddress().getStateProvince():null,
-                    patient.getPersonAddress()!=null?patient.getPersonAddress().getCityVillage():null, patient.getPatientIdentifier(),
-                    null, null, null);
+                    patient.getPersonAddress()!=null?patient.getPersonAddress().getCityVillage():null, patient.getIdentifiers(),
+                    null, null, null,otherDataPoints);
         else
             return this.m_hl7Service.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
                     patient.getBirthdateEstimated(), patient.getGender(),
                     patient.getPersonAddress()!= null?patient.getPersonAddress().getStateProvince():null,
                     patient.getPersonAddress()!=null?patient.getPersonAddress().getCityVillage():null, patient.getPatientIdentifier(),
-                    null, null, null);
+                    null, null, null,otherDataPoints);
     }
 
     /**

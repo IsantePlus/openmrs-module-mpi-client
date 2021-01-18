@@ -33,6 +33,7 @@ import ca.uhn.fhir.rest.gclient.IQuery;
 import com.google.common.io.CharStreams;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,7 +62,6 @@ import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
 import org.openmrs.module.santedb.mpiclient.util.FhirUtil;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Component;
@@ -70,7 +70,6 @@ import org.springframework.stereotype.Component;
  * MPI Client Service Implementation using FHIR
  *
  * @author fyfej
- *
  */
 @Component
 public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationContextAware {
@@ -98,8 +97,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
     private IGenericClient getClient(boolean isSearch) throws MpiClientException {
         FhirContext ctx = FhirContext.forR4();
-        if(null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty())
-        {
+        if (null != this.m_configuration.getProxy() && !this.m_configuration.getProxy().isEmpty()) {
             String[] proxyData = this.m_configuration.getProxy().split(":");
             ctx.getRestfulClientFactory().setProxy(proxyData[0], Integer.parseInt(proxyData[1]));
         }
@@ -182,7 +180,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             }
         }
         // Basic Auth
-        else if("basic".equals(this.m_configuration.getAuthenticationMode())) {
+        else if ("basic".equals(this.m_configuration.getAuthenticationMode())) {
             client.registerInterceptor(new BasicAuthInterceptor(this.m_configuration.getLocalApplication(), this.m_configuration.getMsh8Security()));
         }
         return client;
@@ -194,8 +192,55 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
     @Override
     public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
                                           String gender, String stateOrRegion, String cityOrTownship, PatientIdentifier patientIdentifier,
-                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace) throws MpiClientException {
+                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace,
+                                          Map<String, Object> otherDataPoints) throws MpiClientException {
+        Set<PatientIdentifier> patientIdentifiers = new HashSet<>();
+        patientIdentifiers.add(patientIdentifier);
 
+        return searchPatient(familyName, givenName, dateOfBirth, fuzzyDate, gender, stateOrRegion, cityOrTownship,
+                patientIdentifiers, mothersIdentifier, nextOfKinName, birthPlace, otherDataPoints);
+    }
+
+    @Override
+    public List<MpiPatient> searchPatient(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate, String gender,
+                                          String stateOrRegion, String cityOrTownship, Set<PatientIdentifier> patientIdentifiers,
+                                          PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace,
+                                          Map<String, Object> otherDataPoints) throws MpiClientException {
+
+        IQuery<IBaseBundle> query = loadSearchQuery(familyName, givenName, dateOfBirth, fuzzyDate, gender,
+                stateOrRegion, cityOrTownship, patientIdentifiers, mothersIdentifier, nextOfKinName, birthPlace, otherDataPoints);
+
+        // Send the message and construct the result set
+        return getMpiPatientMatches(query);
+    }
+
+    private List<MpiPatient> getMpiPatientMatches(IQuery<IBaseBundle> query) throws MpiClientException {
+        try {
+
+            Bundle results = query.returnBundle(Bundle.class).execute();
+
+            List<MpiPatient> retVal = new ArrayList<>();
+            for (BundleEntryComponent result : results.getEntry()) {
+                org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
+                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
+                retVal.add(mpiPatient);
+            }
+            return retVal;
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error in FHIR Search", e);
+            log.error(ExceptionUtils.getFullStackTrace(e));
+            throw new MpiClientException(e);
+        } finally {
+        }
+    }
+
+    private IQuery<IBaseBundle> loadSearchQuery(String familyName, String givenName, Date dateOfBirth, boolean fuzzyDate,
+                                                String gender, String stateOrRegion, String cityOrTownship,
+                                                Set<PatientIdentifier> patientIdentifiers,
+                                                PatientIdentifier mothersIdentifier,
+                                                String nextOfKinName, String birthPlace,
+                                                Map<String, Object> otherDataPoints) throws MpiClientException {
         IQuery<IBaseBundle> query = this.getClient(true).search().forResource("Patient");
 
         if (familyName != null && !familyName.isEmpty())
@@ -222,48 +267,50 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         if (gender != null && !gender.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.GENDER.exactly().code(gender));
 
-        if (patientIdentifier != null) {
-//            TODO uncomment once the identifier domain functionality is enforced at the MPI
-//            if (patientIdentifier.getIdentifierType() != null) {
-//                String authority = this.m_configuration.getLocalPatientIdentifierTypeMap()
-//                        .get(patientIdentifier.getIdentifierType().getName());
-//                if (authority == null)
-//                    throw new MpiClientException(
-//                            String.format("Identity domain %s doesn't have an equivalent in the MPI configuration",
-//                                    patientIdentifier.getIdentifierType().getName()));
-//                query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
-//                        .systemAndIdentifier(patientIdentifier.getIdentifier(), authority));
-//            } else
-                query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
-                        .identifier(patientIdentifier.getIdentifier()));
+        if (patientIdentifiers != null) {
+            for (PatientIdentifier patientIdentifier : patientIdentifiers) {
+                if (patientIdentifier.getIdentifierType() != null) {
 
+                    HashMap<String, String> localPatientIdentifierTypeMap = this.m_configuration.getLocalPatientIdentifierTypeMap();
+                    String authority = localPatientIdentifierTypeMap
+                            .get(patientIdentifier.getIdentifierType().getName());
+                    if (authority == null)
+                        throw new MpiClientException(
+                                String.format("Identity domain %s doesn't have an equivalent in the MPI configuration",
+                                        patientIdentifier.getIdentifierType().getName()));
+                    query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
+                            .systemAndIdentifier(patientIdentifier.getIdentifier(), authority));
+                } else {
+//                    Skip the search by the identifier
+                }
+            }
         }
+        String localBiometricSubjectId = (String) otherDataPoints.get("localBiometricSubjectId");
+        String nationalBiometricSubjectId = (String) otherDataPoints.get("nationalBiometricSubjectId");
+        String phoneNumber = (String) otherDataPoints.get("phoneNumber");
+
+        if (StringUtils.isNotBlank(localBiometricSubjectId)) {
+            query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
+                    .systemAndIdentifier(localBiometricSubjectId, "Biometrics Reference Code"));
+        }
+        if (StringUtils.isNotBlank(nationalBiometricSubjectId)) {
+            query = query.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
+                    .systemAndIdentifier(nationalBiometricSubjectId, "Biometrics National Reference Code"));
+        }
+
+        if (StringUtils.isNotBlank(phoneNumber)) {
+            query = query.where(org.hl7.fhir.r4.model.Patient.PHONE.exactly().identifier(phoneNumber));
+        }
+
 
         if (stateOrRegion != null && !stateOrRegion.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_STATE.contains().value(stateOrRegion));
         if (cityOrTownship != null && !cityOrTownship.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_CITY.contains().value(cityOrTownship));
 
-        // Send the message and construct the result set
-        try {
-
-            Bundle results = query.returnBundle(Bundle.class).execute();
-
-            List<MpiPatient> retVal = new ArrayList<MpiPatient>();
-            for (BundleEntryComponent result : results.getEntry()) {
-                org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
-                retVal.add(mpiPatient);
-            }
-            return retVal;
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("Error in FHIR Search", e);
-            log.error(ExceptionUtils.getFullStackTrace(e));
-            throw new MpiClientException(e);
-        } finally {
-        }
+        return query;
     }
+
 
     /**
      * Retrieves a specific patient from the MPI given their identifier
@@ -305,26 +352,22 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             String identifier = null, assigningAuthority = null;
             // Preferred correlation identifier
             if (!this.m_configuration.getPreferredCorrelationDomain().isEmpty()) {
-                for(PatientIdentifier pid : patient.getIdentifiers())
-                {
+                for (PatientIdentifier pid : patient.getIdentifiers()) {
                     String domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName());
-                    if(this.m_configuration.getPreferredCorrelationDomain().equals(domain))
-                    {
+                    if (this.m_configuration.getPreferredCorrelationDomain().equals(domain)) {
                         identifier = pid.getIdentifier();
                         assigningAuthority = domain;
                         break;
                     }
                 }
-            }
-            else // use local identity
+            } else // use local identity
             {
                 identifier = patient.getId().toString();
                 assigningAuthority = this.m_configuration.getLocalPatientIdRoot();
             }
 
             // No identity domains to xref with
-            if(identifier == null || assigningAuthority == null)
-            {
+            if (identifier == null || assigningAuthority == null) {
                 log.warn(String.format("Patient %s has no good cross reference identities to use", patient.getId()));
                 return null;
             }
@@ -334,7 +377,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                             .exactly().systemAndIdentifier(assigningAuthority, identifier))
                     .count(2).returnBundle(Bundle.class).execute();
             // ASSERT: Only 1 result
-            if(results.getEntry().size() != 1)
+            if (results.getEntry().size() != 1)
                 throw new MpiClientException(String.format("Found ambiguous matches (%s matches) on MPI, can't reliably xref this patient", results.getTotal()));
 
             // Is there a result?
@@ -342,20 +385,18 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                 org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
 
                 // Is this patient linked to another patient?
-                if(pat.getLink() != null)
-                    for(PatientLinkComponent lnk : pat.getLink())
-                    {
-                        if(LinkType.REFER.equals(lnk.getType())) {
-                            pat = (org.hl7.fhir.r4.model.Patient)lnk.getOtherTarget();
+                if (pat.getLink() != null)
+                    for (PatientLinkComponent lnk : pat.getLink()) {
+                        if (LinkType.REFER.equals(lnk.getType())) {
+                            pat = (org.hl7.fhir.r4.model.Patient) lnk.getOtherTarget();
                         }
                     }
 
                 MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
                 // Now look for the identity domain we want to xref to
-                for(PatientIdentifier pid : mpiPatient.getIdentifiers())
-                {
+                for (PatientIdentifier pid : mpiPatient.getIdentifiers()) {
                     String domain = this.m_configuration.getLocalPatientIdentifierTypeMap().get(pid.getIdentifierType().getName());
-                    if(toAssigningAuthority.equals(domain))
+                    if (toAssigningAuthority.equals(domain))
                         return pid;
                 }
                 return null;
@@ -371,6 +412,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
     /**
      * Imports patient from MPI? Was in not implemented due to lack of FHIR create capabilites in OpenMRS?
+     *
      * @param patient
      * @return
      * @throws MpiClientException
@@ -394,11 +436,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
             // TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
             // Temporary URI identifier
-            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getUuid());
+            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot() + patientExport.getPatient().getUuid());
 
 
             //            Set mother's name
-            if(patientExport.getMothersMaidenName() != null){
+            if (patientExport.getMothersMaidenName() != null) {
                 Extension mothersMaidenName = new Extension();
                 mothersMaidenName.setUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
                 mothersMaidenName.setValue(new StringType(patientExport.getMothersMaidenName().getValue()));
@@ -406,7 +448,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             }
             //            Set Patient Phone number
             PersonAttribute patientTelephone = patientExport.getPatientTelephone();
-            if(patientTelephone != null){
+            if (patientTelephone != null) {
                 ContactPoint contactPoint = new ContactPoint();
                 contactPoint.setId(patientTelephone.getUuid());
                 contactPoint.setValue(patientTelephone.getValue());
@@ -418,7 +460,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
 //            Patient Obs processing
             Set<Obs> patientObs = patientExport.getPatientObs();
-            if(patientObs != null){
+            if (patientObs != null) {
                 for (Obs obs : patientObs) {
                     switch (obs.getConcept().getConceptId()) {
                         case 165194: {//Place of birth address construct
@@ -441,9 +483,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                     }
                 }
             }
-
-
-
 
 
             IGenericClient client = this.getClient(false);
@@ -470,8 +509,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         Address fhirAddress = new Address();
         fhirAddress.setUse(Address.AddressUse.HOME);
         obs.getGroupMembers().forEach(member -> {
-
-            switch (member.getConcept().getConceptId()){
+            switch (member.getConcept().getConceptId()) {
                 case 165197: {
 //                    Province of residence
                     fhirAddress.setState(member.getValueText());
@@ -546,8 +584,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                 telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
                 telco.setValue(cm.getValueText());
                 telco.setUse(ContactPoint.ContactPointUse.MOBILE);
-                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>();
-                contactPoints.add(telco);
+                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
+                    add(telco);
+                }};
                 contactComponent.setTelecom(contactPoints);
             } else if (cm.getConcept().getConceptId() == 164352) {
 //            	Process relationship to patient
@@ -571,7 +610,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
             admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
             // Temporary URI identifier
-            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot()+patientExport.getPatient().getUuid());
+            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot() + patientExport.getPatient().getUuid());
             IGenericClient client = this.getClient(false);
             MethodOutcome result = client.update().resource(admitMessage).execute();
             if (!result.getCreated())

@@ -12,3 +12,5 @@ target
 */doc/*
 *.iml
 .idea
+
+.DS_Store
