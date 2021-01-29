@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.util.*;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
@@ -220,10 +221,21 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             Bundle results = query.returnBundle(Bundle.class).execute();
 
             List<MpiPatient> retVal = new ArrayList<>();
+            Map<String,org.hl7.fhir.r4.model.Patient> patientMap = new HashMap<>();
             for (BundleEntryComponent result : results.getEntry()) {
-                org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
-                retVal.add(mpiPatient);
+                org.hl7.fhir.r4.model.Patient pat;
+                if(result.hasResource() && result.getResource().hasType("Patient")){
+                    pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
+                    patientMap.put(result.getResource().getId(),pat);
+                    if (pat.hasMeta()
+                            && pat.getMeta().hasTag()
+                            && pat.getMeta().getTagFirstRep().hasCode()
+                            && pat.getMeta().getTagFirstRep().getCode().equals("5c827da5-4858-4f3d-a50c-62ece001efea")
+                            && pat.hasLink()) {
+                        MpiPatient mpiPatient = fhirUtil.parseFhirPatient((org.hl7.fhir.r4.model.Patient) pat.getLinkFirstRep().getOther().getResource());
+                        retVal.add(mpiPatient);
+                    }
+                }
             }
             return retVal;
         } catch (Exception e) {
@@ -307,6 +319,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_STATE.contains().value(stateOrRegion));
         if (cityOrTownship != null && !cityOrTownship.isEmpty())
             query = query.where(org.hl7.fhir.r4.model.Patient.ADDRESS_CITY.contains().value(cityOrTownship));
+        query.include(new Include("Patient:link"));
 
         return query;
     }
