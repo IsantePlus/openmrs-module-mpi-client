@@ -449,22 +449,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
             admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
             admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
 
-            // TODO Integrate this into the FHIR module to be able to send a `system` value (either this or another) in the provided identifiers.
-            // Temporary URI identifier
-            admitMessage.addIdentifier().setSystem("urn:ietf:rfc:3986").setValue(this.m_configuration.getLocalPatientIdRoot() + patientExport.getPatient().getUuid());
-
-            // Temporarily add System to Biometric Identifier:
-            Identifier bid = admitMessage.getIdentifier()
-                    .stream()
-                    .filter(i -> i.hasType("Biometrics National Reference Code"))
-                    .findFirst()
-                    .get();
-            bid.setSystem("http://sedish-haiti.org/biometricid");
-
-            // TODO: figure out if this is needed, or duplicate
-            admitMessage.addIdentifier(bid);
-
-            //            Set mother's name
+            //           Set mother's name
             if (patientExport.getMothersMaidenName() != null) {
                 Extension mothersMaidenName = new Extension();
                 mothersMaidenName.setUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
