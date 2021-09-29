@@ -5,7 +5,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>santedb-mpiclient</artifactId>
-	<version>1.0.5</version>
+	<version>1.1.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>OpenMRS MPI Client Module</name>
 	<description>Allows OpenMRS to interact with MPIs.</description>
@@ -68,13 +68,13 @@
 			<dependency>
 				<groupId>org.openmrs</groupId>
 				<artifactId>event-api</artifactId>
-				<version>2.5</version>
+				<version>${eventApiVersion}</version>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.openmrs.module</groupId>
 				<artifactId>fhir2-api</artifactId>
-				<version>1.3.0-SNAPSHOT</version>
+				<version>${fhirVersion}</version>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
@@ -90,15 +90,19 @@
 			<dependency>
 				<groupId>com.google.code.gson</groupId>
 				<artifactId>gson</artifactId>
-				<version>2.8.5</version>
+				<version>${gsonVersion}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
 	<properties>
 		<openMRSVersion>2.0.5</openMRSVersion>
+		<gsonVersion>2.8.5</gsonVersion>
+		<eventApiVersion>2.5</eventApiVersion>
+		<fhirVersion>1.2.2</fhirVersion>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
 	</properties>
 
 	<build>
@@ -125,7 +129,7 @@
 		<repository>
 			<id>dcm4che-repository</id>
 			<name>DCM4CHE Public Maven Repository</name>
-			<url>http://www.dcm4che.org/maven2</url>
+			<url>https://www.dcm4che.org/maven2</url>
 			<layout>default</layout>
 			<releases>
 				<enabled>true</enabled>
