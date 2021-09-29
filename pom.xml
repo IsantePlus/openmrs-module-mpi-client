@@ -129,7 +129,7 @@
 		<repository>
 			<id>dcm4che-repository</id>
 			<name>DCM4CHE Public Maven Repository</name>
-			<url>http://www.dcm4che.org/maven2</url>
+			<url>https://www.dcm4che.org/maven2</url>
 			<layout>default</layout>
 			<releases>
 				<enabled>true</enabled>
@@ -146,11 +146,11 @@
 		<repository>
 			<id>marc-te</id>
 			<name>TECH EXCHANGE</name>
-			<url>http://te.marc-hi.ca/mvn</url>
+			<url>https://te.marc-hi.ca/mvn</url>
 		</repository>
 		<repository>
 			<id>santesute-main</id>
-			<url>http://santesuite.org/mvn</url>
+			<url>https://santesuite.org/mvn</url>
 			<name>SanteSuite</name>
 		</repository>
 	</repositories>
