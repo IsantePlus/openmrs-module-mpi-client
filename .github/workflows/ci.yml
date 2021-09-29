@@ -29,6 +29,10 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 8.0.232
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@v4
+        with:
+          maven-version: 3.6.3
       - name: Cache Maven packages
         uses: actions/cache@v2
         with:
@@ -43,6 +47,12 @@ jobs:
                 "username": "${{ secrets.RELEASE_USERNAME }}",
                 "password": "${{ secrets.RELEASE_TOKEN }}"
             }]
+          properties: |
+            [
+              { "maven.wagon.http.ssl.insecure": "true" },
+              { "maven.wagon.http.ssl.allowall": "true" },
+              { "maven.wagon.http.ssl.ignore.validity.dates": "true"}
+            ]
           githubServer: false
       - name: Build with Maven
         run: mvn -P 'github-packages' install
