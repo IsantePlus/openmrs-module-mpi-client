@@ -31,12 +31,6 @@ jobs:
                 "username": "${{ secrets.RELEASE_USERNAME }}",
                 "password": "${{ secrets.RELEASE_TOKEN }}"
             }]
-          properties: |
-            [
-              { "maven.wagon.http.ssl.insecure": "true" },
-              { "maven.wagon.http.ssl.allowall": "true" },
-              { "maven.wagon.http.ssl.ignore.validity.dates": "true"}
-            ]
           githubServer: false
       - name: Publish package
         run: mvn -P github-packages -DskipTests -Dfindbugs.skip=true -Dpmd.skip=true -Dcpd.skip=true -B deploy
