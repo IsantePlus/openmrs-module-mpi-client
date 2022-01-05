@@ -20,8 +20,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.Include;
@@ -29,6 +35,7 @@ import ca.uhn.fhir.rest.api.EncodingEnum;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
+import ca.uhn.fhir.rest.client.exceptions.FhirClientConnectionException;
 import ca.uhn.fhir.rest.client.interceptor.BasicAuthInterceptor;
 import ca.uhn.fhir.rest.client.interceptor.BearerTokenAuthInterceptor;
 import ca.uhn.fhir.rest.gclient.IQuery;
@@ -47,9 +54,16 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.dcm4che3.net.audit.AuditLogger;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Address;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.ContactPoint;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
+import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.LinkType;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
@@ -89,6 +103,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
     private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
     private ApplicationContext applicationContext;
+
     @Autowired
     private PatientTranslator patientTranslator;
 
@@ -494,7 +509,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                 }
             }
 
-
             IGenericClient client = this.getClient(false);
             MethodOutcome result = client.create().resource(admitMessage).execute();
 
@@ -502,11 +516,13 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                 throw new MpiClientException(
                         String.format("Error from MPI :> %s", result.getResource().getClass().getName()));
 
+        } catch (FhirClientConnectionException e) {
+            log.error("Error in FHIR PIX message", e);
         } catch (MpiClientException e) {
             log.error("Error in FHIR PIX message", e);
             e.printStackTrace();
             throw e;
-        } catch (Exception e) {
+        }  catch (Exception e) {
             e.printStackTrace();
             log.error(e);
             throw new MpiClientException(e);
