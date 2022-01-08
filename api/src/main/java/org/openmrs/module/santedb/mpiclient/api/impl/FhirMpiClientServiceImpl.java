@@ -525,7 +525,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
         }  catch (Exception e) {
             e.printStackTrace();
             log.error(e);
-            throw new MpiClientException(e);
         } finally {
         }
 
