@@ -14,3 +14,4 @@ target
 .idea
 
 .DS_Store
+.flattened-pom.xml
