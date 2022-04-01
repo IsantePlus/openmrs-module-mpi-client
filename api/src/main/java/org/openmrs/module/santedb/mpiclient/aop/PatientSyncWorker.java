@@ -60,6 +60,8 @@ public class PatientSyncWorker extends Thread {
 		log.info("Running the patient sync process...");
 		try
 		{
+			//delay this thread to avoid ConcurrentModificationException where Mulpitple patiets are called
+			Thread.sleep(1000);
 			// Make sure we only XREF once
 			synchronized (s_xref) {
 				if(s_xref.contains(this.m_patient.getUuid()))
