@@ -243,13 +243,16 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                 if(result.hasResource() && result.getResource().hasType("Patient")){
                     pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
                     patientMap.put(result.getResource().getId(),pat);
+                    // TODO: Remove hard-coded "golden record" code 5c827da5-4858-4f3d-a50c-62ece001efea
                     if (pat.hasMeta()
                             && pat.getMeta().hasTag()
                             && pat.getMeta().getTagFirstRep().hasCode()
                             && pat.getMeta().getTagFirstRep().getCode().equals("5c827da5-4858-4f3d-a50c-62ece001efea")
                             && pat.hasLink()) {
-                        MpiPatient mpiPatient = fhirUtil.parseFhirPatient((org.hl7.fhir.r4.model.Patient) pat.getLinkFirstRep().getOther().getResource());
-                        retVal.add(mpiPatient);
+						for(PatientLinkComponent goldenRecordEntry : pat.getLink()) {
+							MpiPatient mpiPatient = fhirUtil.parseFhirPatient((org.hl7.fhir.r4.model.Patient) goldenRecordEntry.getOther().getResource());
+							retVal.add(mpiPatient);
+						}
                     }
                 }
             }
