@@ -250,8 +250,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
                             && pat.getMeta().getTagFirstRep().getCode().equals("5c827da5-4858-4f3d-a50c-62ece001efea")
                             && pat.hasLink()) {
 						for(PatientLinkComponent goldenRecordEntry : pat.getLink()) {
-							MpiPatient mpiPatient = fhirUtil.parseFhirPatient((org.hl7.fhir.r4.model.Patient) goldenRecordEntry.getOther().getResource());
-							retVal.add(mpiPatient);
+                            if(goldenRecordEntry.getOther().getResource() != null) {
+                                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(
+                                        (org.hl7.fhir.r4.model.Patient) goldenRecordEntry.getOther().getResource());
+                                retVal.add(mpiPatient);
+                            }
 						}
                     }
                 }
