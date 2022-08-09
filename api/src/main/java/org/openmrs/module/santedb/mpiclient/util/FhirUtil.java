@@ -16,36 +16,49 @@
  */
 package org.openmrs.module.santedb.mpiclient.util;
 
+import static org.apache.commons.lang3.Validate.notNull;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.DataTypeException;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.Address.AddressUse;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.ContactPoint;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.HumanName.NameUse;
+import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient.ContactComponent;
-import org.openmrs.Patient;
+import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.StringType;
 import org.openmrs.Obs;
+import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonName;
 import org.openmrs.api.ConceptService;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.api.translators.TelecomTranslator;
-import org.openmrs.module.fhir2.api.translators.impl.TelecomTranslatorImpl;
+import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
-
-import static org.apache.commons.lang3.Validate.notNull;
+import org.springframework.beans.factory.annotation.Autowired;
 
 
 public class FhirUtil {
@@ -60,6 +73,9 @@ public class FhirUtil {
 
 	// Get the HIE config
 	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
+
+	@Autowired
+	private PatientTranslator patientTranslator;
 
 	/**
 	 * Creates a new message utility
@@ -361,17 +377,17 @@ public class FhirUtil {
 	// TODO: replace with fhir2 functionality (translator MpiPatient <-> Patient)
 	public MpiPatient parseFhirPatient(org.hl7.fhir.r4.model.Patient fhirPatient)
 	{
-		MpiPatient patient = new MpiPatient();
-
-		notNull(patient, "The existing Openmrs Patient object should not be null");
 		notNull(fhirPatient, "The Patient object should not be null");
 
-//		Set UUID
-//		patient.setUuid(fhirPatient.getId());
+		MpiPatient patient = (MpiPatient) patientTranslator.toOpenmrsType(fhirPatient);
+
+		notNull(patient, "The existing Openmrs Patient object should not be null");
+
 
 
 
 		// Attempt to load a patient by identifier
+/*
 		Iterator identifierIterator = fhirPatient.getIdentifier().iterator();
 		while(identifierIterator.hasNext()) {
 			Identifier identifier = (Identifier)identifierIterator.next();
@@ -381,6 +397,7 @@ public class FhirUtil {
 			}
 
 		}
+*/
 
 
 		// Enterprise root? 
@@ -397,7 +414,7 @@ public class FhirUtil {
 		}
 		
 		// Attempt to copy names
-		for (HumanName name : fhirPatient.getName()) {
+		/*for (HumanName name : fhirPatient.getName()) {
 			PersonName pn = this.interpretFhirName(name);
 			patient.addName(pn);
 		}
@@ -460,7 +477,7 @@ public class FhirUtil {
 			}
 		}
 
-
+	*/
 //		Patient Contacts
 		for (ContactComponent contactComponent : fhirPatient.getContact()) {
 			Obs obs = null;
@@ -473,7 +490,6 @@ public class FhirUtil {
 				e.printStackTrace();
 			}
 		}
-
 
 
 //		Source Location
@@ -491,10 +507,6 @@ public class FhirUtil {
 			org.openmrs.PersonAttribute attribute = new org.openmrs.PersonAttribute(attributeType,((StringType)mothersMaidenName.getValue()).getValue());
 			patient.addAttribute(attribute);
 		}
-
-
-
-
 
 		return patient;
 	}
