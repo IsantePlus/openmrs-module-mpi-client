@@ -250,8 +250,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 				if (result.hasResource() && result.getResource().hasType("Patient")) {
 					pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
 					String grId = null;
-					if (pat.hasLink() && pat.getLink().size() == 1) {
-						grId = pat.getLinkFirstRep().getId();
+					if (pat.hasLink() && pat.getLink().size() == 1 && pat.getLinkFirstRep().hasOther()) {
+						grId = pat.getLinkFirstRep().getOther().getReferenceElement().getIdPart();
 					}
 					// Create a list with all of the unique IDs for the golden records.
 					if (grId != null && !goldenRecordUuids.contains(grId))
