@@ -66,24 +66,14 @@
 	</globalProperty>
 	/Required Global Properties -->
 	<globalProperty>
-		<property>mpi-client.endpoint.pdq.addr</property>
-		<defaultValue>mpi.domain.com</defaultValue>
-		<description>Identifies the location of the PDQ endpoint</description>
+		<property>mpi-client.endpoint.cr.addr</property>
+		<defaultValue>https://openhim.sedish-haiti.org/CR/fhir</defaultValue>
+		<description>Identifies the location of the Client Registry endpoint</description>
 	</globalProperty>
 	<globalProperty>
-		<property>mpi-client.endpoint.pdq.port</property>
-		<defaultValue>2100</defaultValue>
+		<property>mpi-client.endpoint.cr.port</property>
+		<defaultValue></defaultValue>
 		<description>Identifies the port of the PDQ interface</description>
-	</globalProperty>
-	<globalProperty>
-		<property>mpi-client.endpoint.pix.addr</property>
-		<defaultValue>mpi.domain.com</defaultValue>
-		<description>Identifies the location of the PIX endpoint</description>
-	</globalProperty>
-	<globalProperty>
-		<property>mpi-client.endpoint.pix.port</property>
-		<defaultValue>2100</defaultValue>
-		<description>Identifies the port of the PIX interface</description>
 	</globalProperty>
 	<globalProperty>
 		<property>mpi-client.pid.correlation</property>
@@ -249,6 +239,11 @@
 		<property>mpi-client.reg.patientTelephoneNumber</property>
 		<defaultValue>Telephone Number</defaultValue>
 		<description>The telephone number for the patient</description>
+	</globalProperty>
+	<globalProperty>
+		<property>mpi-client.goldenRecordUuid</property>
+		<defaultValue></defaultValue>
+		<description>The UUID for the Golden Record tag in OpenCR</description>
 	</globalProperty>
 		<!--
 	<dwr>
