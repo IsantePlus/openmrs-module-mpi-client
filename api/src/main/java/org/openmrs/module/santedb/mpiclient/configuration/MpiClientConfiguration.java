@@ -413,7 +413,7 @@ public class MpiClientConfiguration {
 
 	private static final String PROP_NAME_PATIENT_TELEPHONE_ATTRIBUTE_NAME = "mpi-client.reg.patientTelephoneNumber";
 
-	private static final String PROP_NAME_GOLDEN_RECORD_UUID = "mpi-client..patientTelephoneNumber";
+	private static final String PROP_NAME_GOLDEN_RECORD_UUID_ATTRIBUTE_NAME = "mpi-client.goldenRecordUuid";
 
 	public String getRegistrationConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
@@ -424,7 +424,7 @@ public class MpiClientConfiguration {
 	}
 
 	public String getGoldenRecordUuid() {
-		return this.getOrCreateGlobalProperty(PROP_NAME_GOLDEN_RECORD_UUID, "5c827da5-4858-4f3d-a50c-62ece001efea");
+		return this.getOrCreateGlobalProperty(PROP_NAME_GOLDEN_RECORD_UUID_ATTRIBUTE_NAME, "5c827da5-4858-4f3d-a50c-62ece001efea");
 	}
 
 	public String getEmergencyContactConceptUuid() {

@@ -1,17 +1,14 @@
 /**
  * Portions Copyright 2015-2018 Mohawk College of Applied Arts and Technology
  * Portions Copyright (c) 2014-2020 Fyfe Software Inc.
- *  
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
  */
 package org.openmrs.module.santedb.mpiclient.util;
@@ -66,7 +63,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class FhirUtil implements ApplicationContextAware {
-	
+
 	private final Log log = LogFactory.getLog(this.getClass());
 
 	// locking object
@@ -103,7 +100,7 @@ public class FhirUtil implements ApplicationContextAware {
 
 	/**
 	 * Update the specified FHIR identifier
-	 * 
+	 *
 	 * @param fhirIdentifier    The FHIR identifier to be updated
 	 * @param patientIdentifier The patient identifier to be mapped
 	 * @param domain            The domain in which the identifier belongs
@@ -124,7 +121,7 @@ public class FhirUtil implements ApplicationContextAware {
 
 	/**
 	 * Interpret the XAD as a person address
-	 * 
+	 *
 	 * @return
 	 */
 	private PersonAddress interpretFhirAddress(Address addr) {
@@ -135,17 +132,17 @@ public class FhirUtil implements ApplicationContextAware {
 		}
 		// Set the address
 		pa.setUuid(addr.getId());
-		if(addr.hasLine())
+		if (addr.hasLine())
 			pa.setAddress1(addr.getLine().get(0).asStringValue());
-		if(addr.hasCity())
+		if (addr.hasCity())
 			pa.setCityVillage(addr.getCity());
-		if(addr.hasCountry())
+		if (addr.hasCountry())
 			pa.setCountry(addr.getCountry());
-		if(addr.hasDistrict())
+		if (addr.hasDistrict())
 			pa.setCountyDistrict(addr.getDistrict());
-		if(addr.hasPostalCode())
+		if (addr.hasPostalCode())
 			pa.setPostalCode(addr.getPostalCode());
-		if(addr.hasState())
+		if (addr.hasState())
 			pa.setStateProvince(addr.getState());
 
 		if (AddressUse.HOME.equals(addr.getUse()))
@@ -153,10 +150,10 @@ public class FhirUtil implements ApplicationContextAware {
 
 		return pa;
 	}
-	
+
 	/**
 	 * Interpret the CX ID as a patient Identifier
-	 * 
+	 *
 	 * @param id
 	 */
 	private PatientIdentifier interpretFhirId(Identifier id) {
@@ -196,14 +193,14 @@ public class FhirUtil implements ApplicationContextAware {
 
 		return patId;
 	}
-	
+
 	/**
 	 * Updates the provided fhir name with the person name
-	 * 
+	 *
 	 * @param name The name to be updated with the contents of pn
 	 * @param pn   The person name to convert
 	 */
-	private void updateFhirName(HumanName name, PersonName pn)  {
+	private void updateFhirName(HumanName name, PersonName pn) {
 
 		String nameRewrite = this.m_configuration.getNameRewriteRule();
 
@@ -227,7 +224,7 @@ public class FhirUtil implements ApplicationContextAware {
 
 	/**
 	 * Interpret the FHIR HumanName as a Patient Name
-	 * 
+	 *
 	 * @return The interpreted name
 	 */
 	private PersonName interpretFhirName(HumanName name) {
@@ -244,7 +241,7 @@ public class FhirUtil implements ApplicationContextAware {
 			pn.setFamilyName(name.getFamily());
 
 		// Given name
-		if(!name.hasGiven())
+		if (!name.hasGiven())
 			pn.setGivenName("(NULL)");
 		else
 			pn.setGivenName(name.getGivenAsSingleString());
@@ -259,7 +256,7 @@ public class FhirUtil implements ApplicationContextAware {
 
 	/**
 	 * Updates the specified HL7v2 address
-	 * 
+	 *
 	 * @param pa
 	 * @throws DataTypeException
 	 */
@@ -381,17 +378,13 @@ public class FhirUtil implements ApplicationContextAware {
 	 * @return The OpenMRS patient
 	 */
 	// TODO: replace with fhir2 functionality (translator MpiPatient <-> Patient)
-	public MpiPatient parseFhirPatient(org.hl7.fhir.r4.model.Patient fhirPatient,Patient patient)
-	{
+	public MpiPatient parseFhirPatient(org.hl7.fhir.r4.model.Patient fhirPatient, Patient patient) {
 		notNull(patient, "The Patient object should not be null");
 		notNull(fhirPatient, "The FHIR Patient object should not be null");
 
 		MpiPatient mpiPatient = new MpiPatient(patient);
 
 		notNull(mpiPatient, "The existing Openmrs Patient object should not be null");
-
-
-
 
 		// Attempt to load a patient by identifier
 /*
@@ -406,21 +399,22 @@ public class FhirUtil implements ApplicationContextAware {
 		}
 */
 
-
-		// Enterprise root? 
-		if(this.m_configuration != null && null != this.m_configuration.getEnterprisePatientIdRoot() && !this.m_configuration.getEnterprisePatientIdRoot().isEmpty())
-		{
-			Identifier fhirSysId = new Identifier();
-			fhirSysId.setSystem(this.m_configuration.getEnterprisePatientIdRoot());
-			fhirSysId.setValue(fhirPatient.getIdElement().toUnqualifiedVersionless().getValue());
-			log.warn(String.format("Enterprise ID %s will be mapped", fhirPatient.getIdElement().toUnqualifiedVersionless().getValue()));
-			PatientIdentifier sysId = this.interpretFhirId(fhirSysId);
-			if(sysId != null) {
-				mpiPatient.addIdentifier(sysId);
+		try {
+			// Enterprise root?
+			if (this.m_configuration != null && null != this.m_configuration.getEnterprisePatientIdRoot()
+					&& !this.m_configuration.getEnterprisePatientIdRoot().isEmpty()) {
+				Identifier fhirSysId = new Identifier();
+				fhirSysId.setSystem(this.m_configuration.getEnterprisePatientIdRoot());
+				fhirSysId.setValue(fhirPatient.getIdElement().toUnqualifiedVersionless().getValue());
+				log.warn(String.format("Enterprise ID %s will be mapped",
+						fhirPatient.getIdElement().toUnqualifiedVersionless().getValue()));
+				PatientIdentifier sysId = this.interpretFhirId(fhirSysId);
+				if (sysId != null) {
+					mpiPatient.addIdentifier(sysId);
+				}
 			}
-		}
-		
-		// Attempt to copy names
+
+			// Attempt to copy names
 		/*for (HumanName name : fhirPatient.getName()) {
 			PersonName pn = this.interpretFhirName(name);
 			patient.addName(pn);
@@ -431,7 +425,7 @@ public class FhirUtil implements ApplicationContextAware {
 			patient.setGender("F");
 		else if(AdministrativeGender.MALE.equals(fhirPatient.getGender()))
 			patient.setGender("M");
-		else 
+		else
 			patient.setGender("U");
 
 		// Copy DOB
@@ -455,7 +449,7 @@ public class FhirUtil implements ApplicationContextAware {
 			}
 			catch (FHIRException ignored) {}
 		}
-		
+
 		// Addresses
 		for (Address addr : fhirPatient.getAddress()) {
 			// Skip bad addresses
@@ -485,34 +479,43 @@ public class FhirUtil implements ApplicationContextAware {
 		}
 
 	*/
-//		Patient Contacts
-		for (ContactComponent contactComponent : fhirPatient.getContact()) {
-			Obs obs = null;
-			try {
-				obs = translateContactComponent(contactComponent);
-				if (obs != null) {
-					mpiPatient.addPatientObservation(obs);
+			//		Patient Contacts
+			for (ContactComponent contactComponent : fhirPatient.getContact()) {
+				Obs obs = null;
+				try {
+					obs = translateContactComponent(contactComponent);
+					if (obs != null) {
+						mpiPatient.addPatientObservation(obs);
+					}
 				}
-			} catch (ParseException e) {
-				e.printStackTrace();
+				catch (ParseException e) {
+					e.printStackTrace();
+				}
+			}
+
+			//		Source Location
+			Identifier identifierFirstRep = fhirPatient.getIdentifierFirstRep();
+			if (identifierFirstRep.hasExtension("http://fhir.openmrs.org/ext/patient/identifier#location")) {
+				Extension locationExtension = identifierFirstRep.getExtensionByUrl(
+						"http://fhir.openmrs.org/ext/patient/identifier#location");
+				Reference value = (Reference) locationExtension.getValue();
+				mpiPatient.setSourceLocation(value.getDisplay());
+			}
+
+			//		Mother's maiden name
+			Extension mothersMaidenName = fhirPatient.getExtensionByUrl(
+					"http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
+			if (mothersMaidenName != null) {
+				org.openmrs.PersonAttributeType attributeType = Context.getPersonService()
+						.getPersonAttributeTypeByName(m_configuration.getMothersAttributeName());
+				org.openmrs.PersonAttribute attribute = new org.openmrs.PersonAttribute(attributeType,
+						((StringType) mothersMaidenName.getValue()).getValue());
+				mpiPatient.addAttribute(attribute);
 			}
 		}
-
-
-//		Source Location
-		Identifier identifierFirstRep = fhirPatient.getIdentifierFirstRep();
-		if(identifierFirstRep.hasExtension("http://fhir.openmrs.org/ext/patient/identifier#location")){
-			Extension locationExtension = identifierFirstRep.getExtensionByUrl("http://fhir.openmrs.org/ext/patient/identifier#location");
-			Reference value = (Reference) locationExtension.getValue();
-			mpiPatient.setSourceLocation(value.getDisplay());
-		}
-
-//		Mother's maiden name
-		Extension mothersMaidenName = fhirPatient.getExtensionByUrl("http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName");
-		if(mothersMaidenName != null){
-			org.openmrs.PersonAttributeType attributeType = Context.getPersonService().getPersonAttributeTypeByName(m_configuration.getMothersAttributeName());
-			org.openmrs.PersonAttribute attribute = new org.openmrs.PersonAttribute(attributeType,((StringType)mothersMaidenName.getValue()).getValue());
-			mpiPatient.addAttribute(attribute);
+		catch (Exception e) {
+			this.log.error("Could not finish parsing FHIR patient!");
+			e.printStackTrace();
 		}
 
 		return mpiPatient;
@@ -522,16 +525,16 @@ public class FhirUtil implements ApplicationContextAware {
 
 		ConceptService conceptService = Context.getConceptService();
 		org.openmrs.Location defaultLocation = Context.getLocationService().getDefaultLocation();
-		org.openmrs.Obs parent = new  org.openmrs.Obs();
+		org.openmrs.Obs parent = new org.openmrs.Obs();
 		Set<org.openmrs.Obs> contactMembers = new HashSet<>();
 
-//		Set type
+		//		Set type
 		parent.setConcept(conceptService.getConceptByUuid("165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
 
-//		Set location
+		//		Set location
 		parent.setLocation(defaultLocation);
 
-//		Process City
+		//		Process City
 		org.openmrs.Obs obs;
 		String city = birthPlaceAddress.getCity();
 		obs = new org.openmrs.Obs();
@@ -541,8 +544,6 @@ public class FhirUtil implements ApplicationContextAware {
 		obs.setObsDatetime(new Date());
 		contactMembers.add(obs);
 
-
-
 		String state = birthPlaceAddress.getState();
 		obs = new org.openmrs.Obs();
 		obs.setConcept(conceptService.getConcept(165197));
@@ -551,9 +552,8 @@ public class FhirUtil implements ApplicationContextAware {
 		obs.setObsDatetime(new Date());
 		contactMembers.add(obs);
 
-
 		String country = birthPlaceAddress.getCountry();
-//			165198
+		//			165198
 		obs = new org.openmrs.Obs();
 		obs.setConcept(conceptService.getConcept(165198));
 		obs.setValueAsString(String.valueOf(country));
@@ -563,63 +563,62 @@ public class FhirUtil implements ApplicationContextAware {
 
 		Iterator<Extension> iterator = birthPlaceAddress.getExtension().iterator();
 
-		while (iterator.hasNext()){
+		while (iterator.hasNext()) {
 			Extension nextExtension = iterator.next();
 			processAddressExtension(conceptService, contactMembers, nextExtension);
 		}
 
 		parent.setGroupMembers(contactMembers);
 
-
 		return parent;
 	}
 
 	public ContactComponent translatePatientContact(Obs patientOb) {
-//		Process patient contact -
-        ContactComponent contactComponent = new ContactComponent();
-        Set<Obs> contactMembers = patientOb.getGroupMembers(false);
-        for (Obs cm : contactMembers) {
-//			TODO move to global peroperties and use UUID instead
-            if (cm.getConcept().getConceptId() == 163258) {
-//				Process contact name
-                HumanName contactName = new HumanName();
-                String[] names = cm.getValueText().split(" ");
+		//		Process patient contact -
+		ContactComponent contactComponent = new ContactComponent();
+		Set<Obs> contactMembers = patientOb.getGroupMembers(false);
+		for (Obs cm : contactMembers) {
+			//			TODO move to global peroperties and use UUID instead
+			if (cm.getConcept().getConceptId() == 163258) {
+				//				Process contact name
+				HumanName contactName = new HumanName();
+				String[] names = cm.getValueText().split(" ");
 
-                if (names.length > 1) {
-                    contactName.setFamily(names[1]);
-                    List<StringType> ns = new ArrayList<StringType>() {{
-                        add(new StringType(names[0]));
-                    }};
-                    contactName.setGiven(ns);
-                } else if (names.length == 1) {
-                    contactName.setFamily(names[0]);
-                }
-                contactComponent.setName(contactName);
-            } else if (cm.getConcept().getConceptId() == 159635) {
-//				Process contact's phone number
-                ContactPoint telco = new ContactPoint();
-                telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
-                telco.setValue(cm.getValueText());
-                List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
-                    add(telco);
-                }};
-                contactPoints.add(telco);
-                contactComponent.setTelecom(contactPoints);
-            } else if (cm.getConcept().getConceptId() == 164352) {
-//            	Process relationship to patient
-                CodeableConcept concept = new CodeableConcept();
-                concept.setText(cm.getValueCodedName().getName());
-                contactComponent.addRelationship(concept);
+				if (names.length > 1) {
+					contactName.setFamily(names[1]);
+					List<StringType> ns = new ArrayList<StringType>() {{
+						add(new StringType(names[0]));
+					}};
+					contactName.setGiven(ns);
+				} else if (names.length == 1) {
+					contactName.setFamily(names[0]);
+				}
+				contactComponent.setName(contactName);
+			} else if (cm.getConcept().getConceptId() == 159635) {
+				//				Process contact's phone number
+				ContactPoint telco = new ContactPoint();
+				telco.setSystem(ContactPoint.ContactPointSystem.PHONE);
+				telco.setValue(cm.getValueText());
+				List<ContactPoint> contactPoints = new ArrayList<ContactPoint>() {{
+					add(telco);
+				}};
+				contactPoints.add(telco);
+				contactComponent.setTelecom(contactPoints);
+			} else if (cm.getConcept().getConceptId() == 164352) {
+				//            	Process relationship to patient
+				CodeableConcept concept = new CodeableConcept();
+				concept.setText(cm.getValueCodedName().getName());
+				contactComponent.addRelationship(concept);
 
-            } else if (cm.getConcept().getConceptId() == 164958) {
-//            	Wrong mapping for address
+			} else if (cm.getConcept().getConceptId() == 164958) {
+				//            	Wrong mapping for address
 
-            }
-        }
-        return contactComponent;
-    }
+			}
+		}
+		return contactComponent;
+	}
 
-    public org.openmrs.PersonAttribute translateTelecom(ContactPoint contactPoint){
+	public org.openmrs.PersonAttribute translateTelecom(ContactPoint contactPoint) {
 		org.openmrs.PersonAttribute personAttribute = new org.openmrs.PersonAttribute();
 		if (contactPoint == null) {
 			return personAttribute;
@@ -629,30 +628,29 @@ public class FhirUtil implements ApplicationContextAware {
 		// TODO figure out why this was taken out of FhirConstants (PERSON_CONTACT_ATTRIBUTE_TYPE) in parent fork
 		personAttribute.setAttributeType(Context.getPersonService().getPersonAttributeTypeByUuid(
 				Context.getAdministrationService().getGlobalProperty("fhir2.personAttributeTypeUuid")));
-		return  personAttribute;
+		return personAttribute;
 	}
-
 
 	private org.openmrs.Obs translateContactComponent(ContactComponent contactComponent) throws ParseException {
 		ConceptService conceptService = Context.getConceptService();
 		org.openmrs.Location defaultLocation = Context.getLocationService().getDefaultLocation();
-		org.openmrs.Obs parent = new  org.openmrs.Obs();
+		org.openmrs.Obs parent = new org.openmrs.Obs();
 		Set<org.openmrs.Obs> contactMembers = new HashSet<>();
 
-//		Set type
+		//		Set type
 		Reference organization = contactComponent.getOrganization();
-		if(organization != null){
+		if (organization != null) {
 			parent.setConcept(conceptService.getConceptByName(organization.getDisplay()));
 		}
-//		Set location
+		//		Set location
 		parent.setLocation(defaultLocation);
 
-//		set name
-		if(contactComponent.hasName()){
+		//		set name
+		if (contactComponent.hasName()) {
 			HumanName humanName = contactComponent.getName();
-			if(humanName.hasFamily()){
+			if (humanName.hasFamily()) {
 				String contactName = "";
-				if(humanName.hasGiven()){
+				if (humanName.hasGiven()) {
 					contactName += humanName.getGiven().toString() + " ";
 				}
 				contactName += humanName.getFamily();
@@ -665,9 +663,8 @@ public class FhirUtil implements ApplicationContextAware {
 			}
 		}
 
-
-//		Process phone number
-		if(contactComponent.hasTelecom()){
+		//		Process phone number
+		if (contactComponent.hasTelecom()) {
 			ContactPoint telecomComponent = contactComponent.getTelecomFirstRep();
 			org.openmrs.Obs telecomObs = new org.openmrs.Obs();
 			telecomObs.setConcept(conceptService.getConcept(159635));
@@ -677,8 +674,8 @@ public class FhirUtil implements ApplicationContextAware {
 			contactMembers.add(telecomObs);
 		}
 
-//		Process relationship to patient
-		if(contactComponent.hasRelationship()){
+		//		Process relationship to patient
+		if (contactComponent.hasRelationship()) {
 			CodeableConcept patientRelationship = contactComponent.getRelationshipFirstRep();
 			org.openmrs.Obs relationshipObs = new org.openmrs.Obs();
 			relationshipObs.setConcept(conceptService.getConcept(164352));
@@ -688,8 +685,8 @@ public class FhirUtil implements ApplicationContextAware {
 			contactMembers.add(relationshipObs);
 		}
 
-//		Process contact address
-		if(contactComponent.hasAddress()){
+		//		Process contact address
+		if (contactComponent.hasAddress()) {
 			org.openmrs.Obs obs;
 			Address contactAddress = contactComponent.getAddress();
 			String city = contactAddress.getCity();
@@ -700,8 +697,6 @@ public class FhirUtil implements ApplicationContextAware {
 			obs.setObsDatetime(new Date());
 			contactMembers.add(obs);
 
-
-
 			String state = contactAddress.getState();
 			obs = new org.openmrs.Obs();
 			obs.setConcept(conceptService.getConcept(165197));
@@ -710,9 +705,8 @@ public class FhirUtil implements ApplicationContextAware {
 			obs.setObsDatetime(new Date());
 			contactMembers.add(obs);
 
-
 			String country = contactAddress.getCountry();
-//			165198
+			//			165198
 			obs = new org.openmrs.Obs();
 			obs.setConcept(conceptService.getConcept(165198));
 			obs.setValueAsString(String.valueOf(country));
@@ -722,7 +716,7 @@ public class FhirUtil implements ApplicationContextAware {
 
 			Iterator<Extension> iterator = contactAddress.getExtension().iterator();
 
-			while (iterator.hasNext()){
+			while (iterator.hasNext()) {
 				Extension nextExtension = iterator.next();
 				processAddressExtension(conceptService, contactMembers, nextExtension);
 			}
@@ -731,15 +725,15 @@ public class FhirUtil implements ApplicationContextAware {
 
 		parent.setGroupMembers(contactMembers);
 
-
 		return parent;
 
 	}
 
-	private void processAddressExtension(ConceptService conceptService, Set<Obs> contactMembers, Extension nextExtension) throws ParseException {
+	private void processAddressExtension(ConceptService conceptService, Set<Obs> contactMembers, Extension nextExtension)
+			throws ParseException {
 		Obs obs = new Obs();
 		org.openmrs.Concept obsConcept = null;
-		switch (nextExtension.getUrl()){
+		switch (nextExtension.getUrl()) {
 			case "Communal section": {
 				obsConcept = conceptService.getConcept(165196);
 				break;
@@ -753,14 +747,14 @@ public class FhirUtil implements ApplicationContextAware {
 				break;
 			}
 		}
-		if(obsConcept!=null){
+		if (obsConcept != null) {
 			obs.setConcept(obsConcept);
 			obs.setValueAsString(String.valueOf(nextExtension.getValue()));
 			obs.setLocation(Context.getLocationService().getDefaultLocation());
 			obs.setObsDatetime(new Date());
 			contactMembers.add(obs);
-		}else{
-//			Not processed given concept is missing
+		} else {
+			//			Not processed given concept is missing
 
 		}
 	}
