@@ -95,9 +95,6 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	// Log
 	private static final Log log = LogFactory.getLog(HL7MpiClientServiceImpl.class);
 
-	// Message utility
-	private final FhirUtil fhirUtil = FhirUtil.getInstance();
-
 	// Get health information exchange information
 	private final MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
@@ -106,6 +103,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	@Autowired
 	private PatientTranslator patientTranslator;
 
+	@Autowired
+	private FhirUtil fhirUtil;
 	/**
 	 * Get the client as configured in this copy of the OMOD
 	 */
@@ -272,8 +271,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 						for (PatientLinkComponent grPatLink : gr.getLink()) {
 							if (grPatLink.getOther().getResource() != null) {
 
-								MpiPatient mpiPatient = fhirUtil.parseFhirPatient(
-										(org.hl7.fhir.r4.model.Patient) grPatLink.getOther().getResource());
+								MpiPatient mpiPatient = fhirUtil.parseFhirPatient((org.hl7.fhir.r4.model.Patient) grPatLink.getOther().getResource(), patientTranslator.toOpenmrsType(
+										(org.hl7.fhir.r4.model.Patient) grPatLink.getOther().getResource()));
+
 								retVal.add(mpiPatient);
 							}
 						}
@@ -399,7 +399,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
 			for (BundleEntryComponent result : results.getEntry()) {
 				org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-				MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
+				MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat, patientTranslator.toOpenmrsType(pat));
+
 				return mpiPatient;
 			}
 			return null; // no results
@@ -466,7 +467,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 						}
 					}
 
-				MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
+				MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat, patientTranslator.toOpenmrsType(pat));
+
 				// Now look for the identity domain we want to xref to
 				for (PatientIdentifier pid : mpiPatient.getIdentifiers()) {
 					String domain = this.m_configuration.getLocalPatientIdentifierTypeMap()

@@ -58,10 +58,14 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.santedb.mpiclient.configuration.MpiClientConfiguration;
 import org.openmrs.module.santedb.mpiclient.model.MpiPatient;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
 
-
-public class FhirUtil {
+@Component
+public class FhirUtil implements ApplicationContextAware {
 	
 	private final Log log = LogFactory.getLog(this.getClass());
 
@@ -72,7 +76,9 @@ public class FhirUtil {
 	private static FhirUtil s_instance = null;
 
 	// Get the HIE config
-	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
+	private MpiClientConfiguration m_configuration;
+
+	private ApplicationContext applicationContext;
 
 	@Autowired
 	private PatientTranslator patientTranslator;
@@ -80,7 +86,7 @@ public class FhirUtil {
 	/**
 	 * Creates a new message utility
 	 */
-	private FhirUtil() {
+	FhirUtil() {
 	}
 
 	/**
@@ -375,13 +381,14 @@ public class FhirUtil {
 	 * @return The OpenMRS patient
 	 */
 	// TODO: replace with fhir2 functionality (translator MpiPatient <-> Patient)
-	public MpiPatient parseFhirPatient(org.hl7.fhir.r4.model.Patient fhirPatient)
+	public MpiPatient parseFhirPatient(org.hl7.fhir.r4.model.Patient fhirPatient,Patient patient)
 	{
-		notNull(fhirPatient, "The Patient object should not be null");
+		notNull(patient, "The Patient object should not be null");
+		notNull(fhirPatient, "The FHIR Patient object should not be null");
 
-		MpiPatient patient = (MpiPatient) patientTranslator.toOpenmrsType(fhirPatient);
+		MpiPatient mpiPatient = new MpiPatient(patient);
 
-		notNull(patient, "The existing Openmrs Patient object should not be null");
+		notNull(mpiPatient, "The existing Openmrs Patient object should not be null");
 
 
 
@@ -401,7 +408,7 @@ public class FhirUtil {
 
 
 		// Enterprise root? 
-		if(null != this.m_configuration.getEnterprisePatientIdRoot() && !this.m_configuration.getEnterprisePatientIdRoot().isEmpty())
+		if(this.m_configuration != null && null != this.m_configuration.getEnterprisePatientIdRoot() && !this.m_configuration.getEnterprisePatientIdRoot().isEmpty())
 		{
 			Identifier fhirSysId = new Identifier();
 			fhirSysId.setSystem(this.m_configuration.getEnterprisePatientIdRoot());
@@ -409,7 +416,7 @@ public class FhirUtil {
 			log.warn(String.format("Enterprise ID %s will be mapped", fhirPatient.getIdElement().toUnqualifiedVersionless().getValue()));
 			PatientIdentifier sysId = this.interpretFhirId(fhirSysId);
 			if(sysId != null) {
-				patient.addIdentifier(sysId);
+				mpiPatient.addIdentifier(sysId);
 			}
 		}
 		
@@ -484,7 +491,7 @@ public class FhirUtil {
 			try {
 				obs = translateContactComponent(contactComponent);
 				if (obs != null) {
-					patient.addPatientObservation(obs);
+					mpiPatient.addPatientObservation(obs);
 				}
 			} catch (ParseException e) {
 				e.printStackTrace();
@@ -497,7 +504,7 @@ public class FhirUtil {
 		if(identifierFirstRep.hasExtension("http://fhir.openmrs.org/ext/patient/identifier#location")){
 			Extension locationExtension = identifierFirstRep.getExtensionByUrl("http://fhir.openmrs.org/ext/patient/identifier#location");
 			Reference value = (Reference) locationExtension.getValue();
-			patient.setSourceLocation(value.getDisplay());
+			mpiPatient.setSourceLocation(value.getDisplay());
 		}
 
 //		Mother's maiden name
@@ -505,10 +512,10 @@ public class FhirUtil {
 		if(mothersMaidenName != null){
 			org.openmrs.PersonAttributeType attributeType = Context.getPersonService().getPersonAttributeTypeByName(m_configuration.getMothersAttributeName());
 			org.openmrs.PersonAttribute attribute = new org.openmrs.PersonAttribute(attributeType,((StringType)mothersMaidenName.getValue()).getValue());
-			patient.addAttribute(attribute);
+			mpiPatient.addAttribute(attribute);
 		}
 
-		return patient;
+		return mpiPatient;
 	}
 
 	private Obs translateAddressComponent(Address birthPlaceAddress) throws ParseException {
@@ -756,6 +763,15 @@ public class FhirUtil {
 //			Not processed given concept is missing
 
 		}
+	}
+
+	@Override
+	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+		this.applicationContext = applicationContext;
+	}
+
+	public void setPatientTranslator(PatientTranslator patientTranslator) {
+		this.patientTranslator = patientTranslator;
 	}
 
 }

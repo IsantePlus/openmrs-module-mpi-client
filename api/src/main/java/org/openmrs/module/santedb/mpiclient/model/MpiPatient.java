@@ -36,7 +36,45 @@ public class MpiPatient extends Patient {
 	private Set<Obs> 	patientObservations = new HashSet<>();
 
 	private String sourceLocation;
-	
+
+	public MpiPatient() {
+		
+	}
+	public MpiPatient(Patient patient) {
+
+		for(PersonAddress pa : patient.getAddresses()){
+			pa.setPerson(this);
+			pa.setUuid(null);
+			pa.setId(null);
+		}
+		this.setAddresses(patient.getAddresses());
+		for(PersonName pn : patient.getNames()){
+			pn.setPerson(this);
+			pn.setUuid(null);
+			pn.setId(null);
+		}
+		this.setNames(patient.getNames());
+		for(PatientIdentifier pi : patient.getIdentifiers()){
+			pi.setPatient(this);
+			pi.setUuid(null);
+			pi.setId(null);
+		}
+		this.setIdentifiers(patient.getIdentifiers());
+		for(PersonAttribute pa : patient.getAttributes()){
+			pa.setPerson(this);
+			pa.setUuid(null);
+			pa.setId(null);
+		}
+		this.setAttributes(patient.getAttributes());
+
+		this.setDeathDate(patient.getDeathDate());
+		this.setGender(patient.getGender());
+		this.setBirthdateEstimated(patient.getBirthdateEstimated());
+		this.setBirthdate(patient.getBirthdate());
+		//		retVal.setAttributes(this.getAttributes());
+		this.setDead(patient.getDead());
+	}
+
 	/**
 	 * Get relationships of the patient
 	 * @return
