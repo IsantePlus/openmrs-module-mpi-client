@@ -73,7 +73,7 @@ public class FhirUtil implements ApplicationContextAware {
 	private static FhirUtil s_instance = null;
 
 	// Get the HIE config
-	private MpiClientConfiguration m_configuration;
+	private MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
 
 	private ApplicationContext applicationContext;
 
