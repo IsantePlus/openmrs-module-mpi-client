@@ -304,6 +304,89 @@ public class HL7MpiClientServiceImpl
 		}
 	}
 
+	
+	
+	/**
+	 * Search the PDQ supplier for the specified patient data with identifier
+	 * @throws MpiClientException
+	 */
+	public List<MpiPatient> getPatientList(String identifier,
+								 String assigningAuthority) throws MpiClientException {
+
+		Map<String, String> queryParameters = new HashMap<String, String>();
+		queryParameters.put("@PID.3.1", identifier);
+
+		if(assigningAuthority.matches("^(\\d+?\\.){1,}\\d+$")) {
+			queryParameters.put("@PID.3.4.2", assigningAuthority);
+			queryParameters.put("@PID.3.4.3", "ISO");
+		}
+		else
+			queryParameters.put("@PID.3.4.1", assigningAuthority);
+
+		// Auditing stuff
+		AuditMessage auditMessage = null;
+		Message request = null;
+
+		try
+		{
+			request = this.m_messageUtil.createPdqMessage(queryParameters);
+			Message response = this.m_messageUtil.sendMessage(request, this.m_configuration.getPdqEndpoint(), this.m_configuration.getPdqPort());
+
+			Terser terser = new Terser(response);
+			if(!terser.get("/MSA-1").endsWith("A"))
+				throw new MpiClientException(String.format("Error retrieving data :> %s", terser.get("/MSA-1")), response);
+
+			List<MpiPatient> pats = this.m_messageUtil.interpretPIDSegments(response);
+			auditMessage = AuditUtil.getInstance().createPatientSearch(pats, this.m_configuration.getPdqEndpoint(), (QBP_Q21)request);
+
+			/*
+			if(pats.size() >= 1)
+				throw new DuplicateIdentifierException("More than one patient exists");
+			else if(pats.size() == 0)
+				return null;
+			else
+				return pats.get(0);
+			*/
+			return pats;
+		}
+		catch(MpiClientException e)
+		{
+			log.error("Error in PDQ Search", e);
+			if(e.getResponseMessage() != null)
+				try {
+					log.error(new PipeParser().encode(e.getResponseMessage()));
+				} catch (HL7Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			throw e;
+		}
+		catch(Exception e)
+		{
+			log.error("Error in PDQ Search", e);
+
+			if(request != null)
+				try {
+					auditMessage = AuditUtil.getInstance().createPatientSearch(null, this.m_configuration.getPdqEndpoint(), (QBP_Q21)request);
+				} catch (UnknownHostException e1) {
+					// TODO Auto-generated catch block
+					this.log.error("Error creating error audit:", e1);
+				}
+
+			throw new MpiClientException(e);
+		}
+		finally
+		{
+			if(auditMessage != null)
+				try {
+					this.getAuditLogger().write(Calendar.getInstance(), auditMessage);
+				} catch (Exception e) {
+					log.error(e);
+				}
+		}
+	}
+	
+	
 	/**
 	 * Import the patient from the PDQ supplier
 	 * @throws MpiClientException

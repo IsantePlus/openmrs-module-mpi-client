@@ -411,15 +411,45 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			throw new MpiClientException(e);
 		}
 	}
+/**
+     * Retrieves a list of patient from the MPI given their identifier
+     */
+    @Override
+    public List<MpiPatient> getPatientList(String identifier, String assigningAuthority) throws MpiClientException {
 
-	/**
-	 * Resolve patient identifier in the specified identity domain
-	 */
-	@Override
-	public PatientIdentifier resolvePatientIdentifier(Patient patient, String toAssigningAuthority)
-			throws MpiClientException {
-		// Send the message and construct the result set
-		try {
+    	List<MpiPatient> mpiPatientList=new ArrayList<MpiPatient>();
+        // Send the message and construct the result set
+        try {
+            Bundle results = this
+                    .getClient(true).search().forResource("Patient").where(org.hl7.fhir.r4.model.Patient.IDENTIFIER
+//                            .exactly().systemAndIdentifier(assigningAuthority, identifier))
+                            .exactly().identifier(identifier))
+                     .returnBundle(Bundle.class).execute();
+
+            for (BundleEntryComponent result : results.getEntry()) {
+                org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
+                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
+                mpiPatientList.add(mpiPatient);
+                
+            }
+            
+            return mpiPatientList; // no results
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error in PDQ Search", e);
+            throw new MpiClientException(e);
+        } finally {
+        }
+    }
+
+    /**
+     * Resolve patient identifier in the specified identity domain
+     */
+    @Override
+    public PatientIdentifier resolvePatientIdentifier(Patient patient, String toAssigningAuthority)
+            throws MpiClientException {
+        // Send the message and construct the result set
+        try {
 
 			String identifier = null, assigningAuthority = null;
 			// Preferred correlation identifier
