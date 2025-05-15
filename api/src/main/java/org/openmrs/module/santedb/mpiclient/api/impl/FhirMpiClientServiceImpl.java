@@ -226,10 +226,15 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			String stateOrRegion, String cityOrTownship, Set<PatientIdentifier> patientIdentifiers,
 			PatientIdentifier mothersIdentifier, String nextOfKinName, String birthPlace,
 			Map<String, Object> otherDataPoints) throws MpiClientException {
-
+/*
 		IQuery<IBaseBundle> query = loadSearchQuery(familyName, givenName, dateOfBirth, fuzzyDate, gender,
 				stateOrRegion, cityOrTownship, patientIdentifiers, mothersIdentifier, nextOfKinName, birthPlace,
 				otherDataPoints);
+*/
+		IQuery<IBaseBundle> query = loadSearchQuery(familyName, givenName, dateOfBirth, fuzzyDate, gender,
+				null, null, null, null, null, null,otherDataPoints);		
+		
+		
 
 		// Send the message and construct the result set
 		return getMpiPatientMatches(query);
@@ -239,6 +244,8 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 		try {
 
 			Bundle results = query.returnBundle(Bundle.class).execute();
+			
+			log.warn(String.format("GetMpiPatientMatches ::: >>> "+ results.getEntry().size()));
 
 			List<String> goldenRecordUuids = new ArrayList<>();
 			List<MpiPatient> retVal = new ArrayList<>();
@@ -324,7 +331,15 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			} else
 				query = query.where(org.hl7.fhir.r4.model.Patient.BIRTHDATE.exactly().day(dateOfBirth));
 		}
+		
+		
+		if(gender!=null) {
+		if(gender.equals("M")) gender="male";
+		if(gender.equals("F")) gender="female";
+		}
 
+		log.warn(String.format("GetMpiPatientMatches GENDER ::: >>> "+gender));
+		
 		if (gender != null && !gender.isEmpty())
 			query = query.where(org.hl7.fhir.r4.model.Patient.GENDER.exactly().code(gender));
 

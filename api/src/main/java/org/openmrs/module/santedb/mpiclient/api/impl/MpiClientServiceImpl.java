@@ -88,17 +88,26 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
     @Override
     public List<MpiPatient> searchPatient(Patient patient, Map<String, Object> otherDataPoints) throws MpiClientException {
         if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+        {
+        	log.warn(patient.getFamilyName()+"/"+patient.getGivenName()+"/"+patient.getBirthDateTime()+"/"+
+                    patient.getBirthdateEstimated()+"/"+ patient.getGender()+"/"+ patient.getIdentifiers());
+        	
+        	
             return this.m_fhirService.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
-                    patient.getBirthdateEstimated(), patient.getGender(),
-                    patient.getPersonAddress()!= null?patient.getPersonAddress().getStateProvince():null,
-                    patient.getPersonAddress()!=null?patient.getPersonAddress().getCityVillage():null, patient.getIdentifiers(),
+                    patient.getBirthdateEstimated(), patient.getGender(),null,null, patient.getIdentifiers(),
                     null, null, null,otherDataPoints);
+        }
         else
+        {
+        	log.warn(patient.getFamilyName()+"/"+patient.getGivenName()+"/"+patient.getBirthDateTime()+"/"+
+                    patient.getBirthdateEstimated()+"/"+ patient.getGender()+"/"+ patient.getIdentifiers());
+        	
             return this.m_hl7Service.searchPatient(patient.getFamilyName(), patient.getGivenName(), patient.getBirthDateTime(),
                     patient.getBirthdateEstimated(), patient.getGender(),
                     patient.getPersonAddress()!= null?patient.getPersonAddress().getStateProvince():null,
                     patient.getPersonAddress()!=null?patient.getPersonAddress().getCityVillage():null, patient.getPatientIdentifier(),
                     null, null, null,otherDataPoints);
+        }
     }
 
     /**
@@ -126,6 +135,18 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
         	return this.m_hl7Service.getPatientList(identifier, assigningAuthority);
     }
 
+    /**
+     * Get patient using specified identifier and AA
+     */
+    @Override
+    public List<MpiPatient> getPatientList(String identifier, String assigningAuthority) throws MpiClientException {
+        // TODO Auto-generated method stub
+        if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+            return this.m_fhirService.getPatientList(identifier, assigningAuthority);
+        else
+        	return this.m_hl7Service.getPatientList(identifier, assigningAuthority);
+    }
+    
     /**
      * Resolve patient identifier
      */
