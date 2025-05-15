@@ -59,6 +59,14 @@ public interface MpiClientService extends OpenmrsService {
      * Searches for patients with the specified patient identity string
      */
     MpiPatient getPatient(String identifier, String assigningAuthority) throws MpiClientException;
+	
+	
+		/**
+	 * Get List of patient using specified identifier and AA
+	 */
+	List<MpiPatient> getPatientList(String identifier, String assigningAuthority) throws MpiClientException;
+
+
 
     /**
      * Resolve an HIE patient identifier

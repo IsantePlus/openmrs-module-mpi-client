@@ -304,8 +304,6 @@ public class HL7MpiClientServiceImpl
 		}
 	}
 
-	
-	
 	/**
 	 * Search the PDQ supplier for the specified patient data with identifier
 	 * @throws MpiClientException
@@ -347,6 +345,8 @@ public class HL7MpiClientServiceImpl
 			else
 				return pats.get(0);
 			*/
+			
+			log.error("This is a point:"+ pats.size());
 			return pats;
 		}
 		catch(MpiClientException e)
@@ -385,8 +385,7 @@ public class HL7MpiClientServiceImpl
 				}
 		}
 	}
-	
-	
+
 	/**
 	 * Import the patient from the PDQ supplier
 	 * @throws MpiClientException

@@ -53,6 +53,13 @@ public interface MpiClientWorker  {
 	 * Searches for patients with the specified patient identity string
 	 */
 	public MpiPatient getPatient(String identifier, String assigningAuthority) throws MpiClientException;
+	
+	
+	/**
+	 * Retrieves a list of patient from the MPI given their identifier
+	 */
+	List<MpiPatient> getPatientList(String identifier, String assigningAuthority) throws MpiClientException;
+
 
 	/**
 	 * Resolve an HIE patient identifier
