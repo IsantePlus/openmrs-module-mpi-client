@@ -173,7 +173,7 @@
 		<repository>
 			<id>marc-te</id>
 			<name>TECH EXCHANGE</name>
-			<url>http://te.marc-hi.ca/mvn</url>
+			<url>https://oscarmcmaster.sourceforge.net/m2/</url>
 		</repository>
 		<repository>
 			<id>santesute-main</id>
