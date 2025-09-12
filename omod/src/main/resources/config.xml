@@ -29,11 +29,12 @@
 		<point>org.openmrs.gutter.tools</point>
 		<class>${project.parent.groupId}.santedb.mpiclient.extension.html.MpiClientLink</class>
 	</extension>
-	
+	<!-- AOP
 	<advice>
 		 <point>org.openmrs.api.PatientService</point>
 		 <class>${project.parent.groupId}.santedb.mpiclient.aop.PatientSynchronizationAdvice</class>
 	</advice>
+	/AOP -->
 	<advice>
 		 <point>org.openmrs.api.EncounterService</point>
 		 <class>${project.parent.groupId}.santedb.mpiclient.aop.EncounterSynchronizationAdvice</class>
