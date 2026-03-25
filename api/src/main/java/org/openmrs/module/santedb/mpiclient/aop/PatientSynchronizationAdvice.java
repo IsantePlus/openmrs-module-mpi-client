@@ -52,11 +52,6 @@ public class PatientSynchronizationAdvice implements AfterReturningAdvice {
 			PatientUpdateWorker worker = new PatientUpdateWorker(patientExport, Context.getUserContext());
 			worker.start();
 		}
-		else if(method.getName().equals("getPatient"))
-		{
-			PatientSyncWorker worker = new PatientSyncWorker(((Patient)returnValue), Context.getUserContext());
-			worker.start();
-		}
 		else if(method.getName().equals("saveGlobalProperty"))
 			MpiClientConfiguration.getInstance().clearCache();
 		else if(method.getName().equals("mergePatients") && target instanceof PatientService) {
