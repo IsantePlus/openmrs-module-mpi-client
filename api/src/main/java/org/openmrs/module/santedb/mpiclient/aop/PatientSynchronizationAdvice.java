@@ -44,8 +44,11 @@ public class PatientSynchronizationAdvice implements AfterReturningAdvice {
 	 * @see org.springframework.aop.AfterReturningAdvice#afterReturning(java.lang.Object, java.lang.reflect.Method, java.lang.Object[], java.lang.Object)
 	 */
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
-		
-		
+		String crEndpoint = Context.getAdministrationService().getGlobalProperty("mpi-client.endpoint.cr.addr");
+		if (crEndpoint == null || crEndpoint.trim().isEmpty()) {
+			return;
+		}
+
 		if(method.getName().equals("savePatient") && target instanceof PatientService)
 		{
 			MpiPatientExport patientExport = new MpiPatientExport((Patient)returnValue,null,null,null,null);
