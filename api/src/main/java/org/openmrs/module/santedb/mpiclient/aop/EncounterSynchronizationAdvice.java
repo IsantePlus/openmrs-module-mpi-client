@@ -46,6 +46,11 @@ public class EncounterSynchronizationAdvice implements AfterReturningAdvice {
      * @see AfterReturningAdvice#afterReturning(Object, Method, Object[], Object)
      */
     public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
+        String crEndpoint = Context.getAdministrationService().getGlobalProperty("mpi-client.endpoint.cr.addr");
+        if (crEndpoint == null || crEndpoint.trim().isEmpty()) {
+            return;
+        }
+
         if (method.getName().equals("saveEncounter") && target instanceof EncounterService) {
             org.openmrs.Encounter encounter = (Encounter) returnValue;
             if(encounter.getObsAtTopLevel(false).size() > 0){
