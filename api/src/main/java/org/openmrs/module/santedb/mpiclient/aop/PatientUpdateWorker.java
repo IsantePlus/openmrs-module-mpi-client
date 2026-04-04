@@ -68,6 +68,11 @@ public class PatientUpdateWorker extends Thread {
 		try {
 			Context.openSession();
 			Context.setUserContext(this.m_userContext);
+			Context.addProxyPrivilege("Get Identifier Types");
+			Context.addProxyPrivilege("Get Patients");
+			Context.addProxyPrivilege("Get Patient Identifiers");
+			Context.addProxyPrivilege("Edit Patient Identifiers");
+			Context.addProxyPrivilege("Add Patient Identifiers");
 			MpiClientService hieService = Context.getService(MpiClientService.class);
 
 			hieService.exportPatient(this.mpiPatientExport);
@@ -118,6 +123,11 @@ public class PatientUpdateWorker extends Thread {
 		} catch (MpiClientException e) {
 			log.error(e);
 		} finally {
+			Context.removeProxyPrivilege("Get Identifier Types");
+			Context.removeProxyPrivilege("Get Patients");
+			Context.removeProxyPrivilege("Get Patient Identifiers");
+			Context.removeProxyPrivilege("Edit Patient Identifiers");
+			Context.removeProxyPrivilege("Add Patient Identifiers");
 			Context.closeSession();
 		}
 	}
