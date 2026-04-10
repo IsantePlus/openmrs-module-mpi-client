@@ -19,8 +19,8 @@ jobs:
       - name: Set up JDK 8
         uses: actions/setup-java@v4
         with:
-          java-version: 8
-          distribution: temurin
+          java-version: '8.0.242'
+          distribution: zulu
           cache: maven
 
       - name: Install vendored dependencies
@@ -34,7 +34,7 @@ jobs:
           find ~/.m2/repository/org/marc/everest -name "*.jar"
 
       - name: Build and test
-        run: mvn -B -U clean install -s .mvn/settings.xml
+        run: mvn -B -U clean install -s .mvn/settings.xml -Dsurefire.shutdown=kill
 
       - name: Upload OMOD
         uses: actions/upload-artifact@v4
