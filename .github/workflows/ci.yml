@@ -26,8 +26,12 @@ jobs:
       - name: Install vendored dependencies
         run: |
           mkdir -p ~/.m2/repository
+          # Clear any cached everest resolution state
+          rm -rf ~/.m2/repository/org/marc/everest
           cp -r lib/maven-repo/* ~/.m2/repository/
           find ~/.m2/repository -name "*.lastUpdated" -delete 2>/dev/null || true
+          echo "Installed vendored JARs:"
+          find ~/.m2/repository/org/marc/everest -name "*.jar"
 
       - name: Build and test
         run: mvn -B -U clean install -s .mvn/settings.xml
