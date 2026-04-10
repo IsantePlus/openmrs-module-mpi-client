@@ -34,7 +34,7 @@ jobs:
           find ~/.m2/repository/org/marc/everest -name "*.jar"
 
       - name: Build and test
-        run: mvn -B -U clean install -s .mvn/settings.xml -Dsurefire.shutdown=kill
+        run: mvn -B -U clean install -s .mvn/settings.xml
 
       - name: Upload OMOD
         uses: actions/upload-artifact@v4
