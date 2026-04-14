@@ -126,3 +126,18 @@ If uploads are not allowed from the web (changable via a runtime property), you 
 into the ~/.OpenMRS/modules folder.  (Where ~/.OpenMRS is assumed to be the Application 
 Data Directory that the running openmrs is currently using.)  After putting the file in there 
 simply restart OpenMRS/tomcat and the module will be loaded and started.
+
+Releasing
+---------
+Releases are automated via GitHub Actions. To create a new release:
+
+1. Go to the **Actions** tab in this repository.
+2. Select the **Release** workflow from the left sidebar.
+3. Click **Run workflow**.
+4. Enter the release version (e.g. `1.1.5`) and click **Run workflow**.
+
+The workflow will:
+- Set the version in the POM to the release version.
+- Build the module and produce the `.omod` file.
+- Create a GitHub release with the `.omod` attached.
+- Bump the POM version to the next SNAPSHOT (e.g. `1.1.6-SNAPSHOT`) and push to main.
