@@ -34,6 +34,7 @@ jobs:
 
       - name: Publish package
         if: github.event_name == 'release' && github.event.action == 'created'
-        run: mvn -B -DskipTests -Dfindbugs.skip=true -Dpmd.skip=true -Dcpd.skip=true deploy        env:
+        run: mvn -B -DskipTests -Dfindbugs.skip=true -Dpmd.skip=true -Dcpd.skip=true deploy
+        env:
           RELEASE_USERNAME: ${{ secrets.RELEASE_USERNAME }}
           RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
