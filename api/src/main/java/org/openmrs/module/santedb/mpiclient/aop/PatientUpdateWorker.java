@@ -80,11 +80,15 @@ public class PatientUpdateWorker extends Thread {
 
 			Context.openSession();
 			Context.setUserContext(this.m_userContext);
-			Context.addProxyPrivilege("Get Identifier Types");
-			Context.addProxyPrivilege("Get Patients");
-			Context.addProxyPrivilege("Get Patient Identifiers");
-			Context.addProxyPrivilege("Edit Patient Identifiers");
-			Context.addProxyPrivilege("Add Patient Identifiers");
+			try {
+				Context.addProxyPrivilege("Get Identifier Types");
+				Context.addProxyPrivilege("Get Patients");
+				Context.addProxyPrivilege("Get Patient Identifiers");
+				Context.addProxyPrivilege("Edit Patient Identifiers");
+				Context.addProxyPrivilege("Add Patient Identifiers");
+			} catch (Exception e) {
+				log.debug("Error adding proxy privileges", e);
+			}
 			MpiClientService hieService = Context.getService(MpiClientService.class);
 
 			hieService.exportPatient(this.mpiPatientExport);
@@ -135,15 +139,23 @@ public class PatientUpdateWorker extends Thread {
 		} catch (MpiClientException e) {
 			log.error(e);
 		} finally {
-			Context.removeProxyPrivilege("Get Identifier Types");
-			Context.removeProxyPrivilege("Get Patients");
-			Context.removeProxyPrivilege("Get Patient Identifiers");
-			Context.removeProxyPrivilege("Edit Patient Identifiers");
-			Context.removeProxyPrivilege("Add Patient Identifiers");
 			synchronized (s_lock) {
 				s_lock.remove(patientUuid);
 			}
-			Context.closeSession();
+			try {
+				Context.removeProxyPrivilege("Get Identifier Types");
+				Context.removeProxyPrivilege("Get Patients");
+				Context.removeProxyPrivilege("Get Patient Identifiers");
+				Context.removeProxyPrivilege("Edit Patient Identifiers");
+				Context.removeProxyPrivilege("Add Patient Identifiers");
+			} catch (Exception e) {
+				log.debug("Error removing proxy privileges", e);
+			}
+			try {
+				Context.closeSession();
+			} catch (Exception e) {
+				log.debug("Error closing session", e);
+			}
 		}
 	}
 }
