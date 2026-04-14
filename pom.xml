@@ -168,17 +168,12 @@
 		<repository>
 			<id>openmrs-repo</id>
 			<name>OpenMRS Nexus Repository</name>
-			<url>http://mavenrepo.openmrs.org/nexus/content/repositories/public</url>
+			<url>https://mavenrepo.openmrs.org/public</url>
 		</repository>
 		<repository>
-			<id>marc-te</id>
-			<name>TECH EXCHANGE</name>
-			<url>http://te.marc-hi.ca/mvn</url>
-		</repository>
-		<repository>
-			<id>santesute-main</id>
-			<url>http://santesuite.org/mvn</url>
-			<name>SanteSuite</name>
+			<id>oscar-mcmaster</id>
+			<name>Oscar McMaster Maven Repository</name>
+			<url>https://oscarmcmaster.sourceforge.net/m2/</url>
 		</repository>
 	</repositories>
 
@@ -186,7 +181,7 @@
 		<pluginRepository>
 			<id>openmrs-repo</id>
 			<name>OpenMRS Nexus Repository</name>
-			<url>http://mavenrepo.openmrs.org/nexus/content/repositories/public</url>
+			<url>https://mavenrepo.openmrs.org/public</url>
 			<snapshots>
 				<enabled>false</enabled>
 			</snapshots>

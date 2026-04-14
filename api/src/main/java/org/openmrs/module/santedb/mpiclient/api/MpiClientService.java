@@ -111,10 +111,4 @@ public interface MpiClientService extends OpenmrsService {
      */
     public AuditLogger getAuditLogger();
 
-	/**
-	 * Get patient using specified identifier and AA
-	 */
-	List<MpiPatient> getPatientList(String identifier, String assigningAuthority) throws MpiClientException;
-
-
 }

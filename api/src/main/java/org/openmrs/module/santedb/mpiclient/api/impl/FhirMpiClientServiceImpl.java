@@ -443,7 +443,7 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
             for (BundleEntryComponent result : results.getEntry()) {
                 org.hl7.fhir.r4.model.Patient pat = (org.hl7.fhir.r4.model.Patient) result.getResource();
-                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat);
+                MpiPatient mpiPatient = fhirUtil.parseFhirPatient(pat, patientTranslator.toOpenmrsType(pat));
                 mpiPatientList.add(mpiPatient);
                 
             }

@@ -136,18 +136,6 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
     }
 
     /**
-     * Get patient using specified identifier and AA
-     */
-    @Override
-    public List<MpiPatient> getPatientList(String identifier, String assigningAuthority) throws MpiClientException {
-        // TODO Auto-generated method stub
-        if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
-            return this.m_fhirService.getPatientList(identifier, assigningAuthority);
-        else
-        	return this.m_hl7Service.getPatientList(identifier, assigningAuthority);
-    }
-    
-    /**
      * Resolve patient identifier
      */
     @Override

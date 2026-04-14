@@ -93,10 +93,4 @@ public interface MpiClientWorker  {
 	 */
 	public AuditLogger getAuditLogger();
 
-	/**
-	 * Retrieves a list of patient from the MPI given their identifier
-	 */
-	List<MpiPatient> getPatientList(String identifier, String assigningAuthority) throws MpiClientException;
-
-
 }

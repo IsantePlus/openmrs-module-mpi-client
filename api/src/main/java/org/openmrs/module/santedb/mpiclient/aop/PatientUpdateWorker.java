@@ -18,11 +18,11 @@ package org.openmrs.module.santedb.mpiclient.aop;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.marc.everest.datatypes.generic.LIST;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
@@ -40,6 +40,8 @@ import org.openmrs.module.santedb.mpiclient.model.MpiPatientExport;
  *
  */
 public class PatientUpdateWorker extends Thread {
+
+	private final static HashSet<String> s_lock = new HashSet<String>();
 
 	private final Log log = LogFactory.getLog(this.getClass());
 
@@ -65,9 +67,28 @@ public class PatientUpdateWorker extends Thread {
 	public void run() {
 		log.info("Sending update to the MPI for new patient data...");
 		Patient m_patient = this.mpiPatientExport.getPatient();
+		String patientUuid = m_patient.getUuid();
 		try {
+			// Prevent concurrent exports of the same patient
+			synchronized (s_lock) {
+				if (s_lock.contains(patientUuid)) {
+					log.warn(String.format("Patient %s is already being exported, skipping", patientUuid));
+					return;
+				}
+				s_lock.add(patientUuid);
+			}
+
 			Context.openSession();
 			Context.setUserContext(this.m_userContext);
+			try {
+				Context.addProxyPrivilege("Get Identifier Types");
+				Context.addProxyPrivilege("Get Patients");
+				Context.addProxyPrivilege("Get Patient Identifiers");
+				Context.addProxyPrivilege("Edit Patient Identifiers");
+				Context.addProxyPrivilege("Add Patient Identifiers");
+			} catch (Exception e) {
+				log.debug("Error adding proxy privileges", e);
+			}
 			MpiClientService hieService = Context.getService(MpiClientService.class);
 
 			hieService.exportPatient(this.mpiPatientExport);
@@ -96,10 +117,10 @@ public class PatientUpdateWorker extends Thread {
 
 					List<PatientIdentifierType> pitList = new ArrayList<PatientIdentifierType>();
 					pitList.add(pit);
-					
+
 					if (pit != null && m_patient.getPatientIdentifier(pit) == null) {
 						PatientIdentifier pid = hieService.resolvePatientIdentifier(m_patient, xrefDomain);
-						// Already exists 
+						// Already exists
 						if(pid != null && Context.getPatientService().getPatientIdentifiers(pid.getIdentifier(), pitList, null, null, null).size() != 0)
 							log.warn(String.format("Identifier %s already exists", pid.getIdentifier()));
 						else if (pid != null) {
@@ -118,7 +139,23 @@ public class PatientUpdateWorker extends Thread {
 		} catch (MpiClientException e) {
 			log.error(e);
 		} finally {
-			Context.closeSession();
+			synchronized (s_lock) {
+				s_lock.remove(patientUuid);
+			}
+			try {
+				Context.removeProxyPrivilege("Get Identifier Types");
+				Context.removeProxyPrivilege("Get Patients");
+				Context.removeProxyPrivilege("Get Patient Identifiers");
+				Context.removeProxyPrivilege("Edit Patient Identifiers");
+				Context.removeProxyPrivilege("Add Patient Identifiers");
+			} catch (Exception e) {
+				log.debug("Error removing proxy privileges", e);
+			}
+			try {
+				Context.closeSession();
+			} catch (Exception e) {
+				log.debug("Error closing session", e);
+			}
 		}
 	}
 }

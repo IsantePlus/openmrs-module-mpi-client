@@ -6,6 +6,7 @@ target
 
 # Package Files #
 *.jar
+!lib/maven-repo/**/*.jar
 *.war
 *.ear
 /target/*
