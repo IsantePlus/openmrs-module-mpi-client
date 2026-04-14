@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: write
 
     steps:
       - uses: actions/checkout@v6
@@ -22,6 +23,9 @@ jobs:
           java-version: '8.0.242'
           distribution: zulu
           cache: maven
+          server-id: github-packages
+          server-username: RELEASE_USERNAME
+          server-password: RELEASE_TOKEN
 
       - name: Set release version
         run: |
@@ -30,6 +34,12 @@ jobs:
 
       - name: Build
         run: mvn -B clean package -DskipTests
+
+      - name: Publish to GitHub Packages
+        run: mvn -B -P github-packages -DskipTests -Dfindbugs.skip=true -Dpmd.skip=true -Dcpd.skip=true deploy
+        env:
+          RELEASE_USERNAME: ${{ github.actor }}
+          RELEASE_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: Create release
         uses: softprops/action-gh-release@v3.0.0
