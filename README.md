@@ -1,6 +1,6 @@
 ## SanteDB Community SanteMPI Client OpenMRS Module
 ----------------------------------------------------------
-![CI](https://github.com/IsantePlus/openmrs-module-mpi-client/workflows/CI/badge.svg)
+[![Build, Test & Publish](https://github.com/IsantePlus/openmrs-module-mpi-client/actions/workflows/ci.yml/badge.svg)](https://github.com/IsantePlus/openmrs-module-mpi-client/actions/workflows/ci.yml)
 
 This module allows any version of OpenMRS 1.9.8 or above to communicate with a PIX/PDQv2 compatible Master Patient Index such as SanteMPI or the MEDIC CR. This module implements the following profiles:
 
