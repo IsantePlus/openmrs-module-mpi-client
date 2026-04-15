@@ -36,7 +36,7 @@ jobs:
         run: mvn -B clean package -DskipTests
 
       - name: Publish to GitHub Packages
-        run: mvn -B -P github-packages -DskipTests -Dfindbugs.skip=true -Dpmd.skip=true -Dcpd.skip=true deploy
+        run: mvn -B -P github-packages -DskipTests -Dfindbugs.skip=true -Dpmd.skip=true -Dcpd.skip=true -DretryFailedDeploymentCount=1 -Dmaven.deploy.skip=false deploy -pl api,omod
         env:
           RELEASE_USERNAME: ${{ github.actor }}
           RELEASE_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
