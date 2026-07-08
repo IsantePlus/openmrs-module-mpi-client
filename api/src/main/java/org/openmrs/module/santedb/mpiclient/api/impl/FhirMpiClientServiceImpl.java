@@ -67,7 +67,6 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.Location;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.fhir2.api.FhirPatientIdentifierSystemService;
 import org.openmrs.module.santedb.mpiclient.aop.PatientSynchronizationAdvice;
 import org.openmrs.PersonAttribute;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
@@ -777,10 +776,24 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 				log.warn("Patient has no iSantePlus ID; cannot resolve golden record id");
 				return null;
 			}
-			FhirPatientIdentifierSystemService sysService = Context.getService(FhirPatientIdentifierSystemService.class);
-			String system = sysService.getUrlByPatientIdentifierType(localId.getIdentifierType());
+			// Resolve the FHIR identifier system the SAME way the export does: from the fhir2
+			// PatientTranslator output. This guarantees the query system matches exactly what was fed
+			// to OpenCR, and avoids a hard dependency on FhirPatientIdentifierSystemService, which is
+			// not registered on all fhir2 versions.
+			String system = null;
+			try {
+				org.hl7.fhir.r4.model.Patient fhirPatient = this.patientTranslator.toFhirResource(patient);
+				for (org.hl7.fhir.r4.model.Identifier fhirId : fhirPatient.getIdentifier()) {
+					if (fhirId.hasSystem() && localId.getIdentifier().equals(fhirId.getValue())) {
+						system = fhirId.getSystem();
+						break;
+					}
+				}
+			} catch (Exception e) {
+				log.warn("Could not translate patient to resolve identifier system", e);
+			}
 			if (system == null || system.isEmpty()) {
-				log.warn("No FHIR identifier system mapped for iSantePlus ID; cannot resolve golden record id");
+				log.warn("No FHIR identifier system for iSantePlus ID; cannot resolve golden record id");
 				return null;
 			}
 
