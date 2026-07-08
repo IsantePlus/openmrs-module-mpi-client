@@ -415,6 +415,8 @@ public class MpiClientConfiguration {
 
 	private static final String PROP_NAME_GOLDEN_RECORD_UUID_ATTRIBUTE_NAME = "mpi-client.goldenRecordUuid";
 
+	private static final String PROP_NAME_GOLDEN_RECORD_TYPE = "mpi-client.pid.goldenRecordType";
+
 	public String getRegistrationConceptUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_REG_CONCEPT, "165194AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 	}
@@ -425,6 +427,13 @@ public class MpiClientConfiguration {
 
 	public String getGoldenRecordUuid() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_GOLDEN_RECORD_UUID_ATTRIBUTE_NAME, "5c827da5-4858-4f3d-a50c-62ece001efea");
+	}
+
+	/**
+	 * Local patient identifier type in which to store the resolved OpenCR golden record id (CRUID).
+	 */
+	public String getGoldenRecordIdentifierType() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_GOLDEN_RECORD_TYPE, "ECID");
 	}
 
 	public String getEmergencyContactConceptUuid() {

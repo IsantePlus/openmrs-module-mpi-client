@@ -169,6 +169,19 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
             throw new MpiClientException("Patient has been removed from the HIE");
     }
 
+    @Override
+    public String getGoldenRecordId(Patient patient) throws MpiClientException {
+        if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+            return this.m_fhirService.getGoldenRecordId(patient);
+        return null;
+    }
+
+    @Override
+    public void synchronizeGoldenRecordId(Patient patient) throws MpiClientException {
+        if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+            this.m_fhirService.synchronizeGoldenRecordId(patient);
+    }
+
     /**
      * Import patient with specified patient data
      */

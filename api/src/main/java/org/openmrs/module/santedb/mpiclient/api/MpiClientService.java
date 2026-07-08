@@ -81,6 +81,16 @@ public interface MpiClientService extends OpenmrsService {
     void synchronizePatientEnterpriseId(Patient patient) throws MpiClientException;
 
     /**
+     * Resolve the OpenCR golden record id (CRUID) for a locally-registered patient, or null if none.
+     */
+    String getGoldenRecordId(Patient patient) throws MpiClientException;
+
+    /**
+     * Resolve the golden record id and store it locally (as the configured golden-record identifier type).
+     */
+    void synchronizeGoldenRecordId(Patient patient) throws MpiClientException;
+
+    /**
      * Import the specified patient data from the PDQ supplier
      * @param identifier
      * @param asigningAuthority

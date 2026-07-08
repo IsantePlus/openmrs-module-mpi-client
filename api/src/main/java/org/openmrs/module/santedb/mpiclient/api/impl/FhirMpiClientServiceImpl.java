@@ -64,6 +64,11 @@ import org.hl7.fhir.r4.model.codesystems.LinkType;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
+import org.openmrs.PatientIdentifierType;
+import org.openmrs.Location;
+import org.openmrs.api.context.Context;
+import org.openmrs.module.fhir2.api.FhirPatientIdentifierSystemService;
+import org.openmrs.module.santedb.mpiclient.aop.PatientSynchronizationAdvice;
 import org.openmrs.PersonAttribute;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.santedb.mpiclient.api.MpiClientWorker;
@@ -758,5 +763,96 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.applicationContext = applicationContext;
+	}
+
+	/**
+	 * Resolve the OpenCR golden record id (CRUID) for a locally-registered patient: query the MPI by
+	 * the patient's iSantePlus ID, find the linked golden record (by golden tag), and follow any
+	 * replaced-by link to the surviving golden. Returns null when no golden record is found.
+	 */
+	public String getGoldenRecordId(Patient patient) {
+		try {
+			PatientIdentifier localId = patient.getPatientIdentifier("iSantePlus ID");
+			if (localId == null) {
+				log.warn("Patient has no iSantePlus ID; cannot resolve golden record id");
+				return null;
+			}
+			FhirPatientIdentifierSystemService sysService = Context.getService(FhirPatientIdentifierSystemService.class);
+			String system = sysService.getUrlByPatientIdentifierType(localId.getIdentifierType());
+			if (system == null || system.isEmpty()) {
+				log.warn("No FHIR identifier system mapped for iSantePlus ID; cannot resolve golden record id");
+				return null;
+			}
+
+			Bundle bundle = this.getClient(true).search()
+					.byUrl("Patient?identifier=" + system + "|" + localId.getIdentifier() + "&_include=Patient:link")
+					.returnBundle(Bundle.class).execute();
+
+			org.hl7.fhir.r4.model.Patient golden = null;
+			for (BundleEntryComponent entry : bundle.getEntry()) {
+				if (entry.getResource() instanceof org.hl7.fhir.r4.model.Patient) {
+					org.hl7.fhir.r4.model.Patient p = (org.hl7.fhir.r4.model.Patient) entry.getResource();
+					if (p.hasMeta() && p.getMeta().hasTag() && p.getMeta().getTagFirstRep().hasCode()
+							&& p.getMeta().getTagFirstRep().getCode().equals(m_configuration.getGoldenRecordUuid())) {
+						golden = p;
+						break;
+					}
+				}
+			}
+			if (golden == null) {
+				return null;
+			}
+
+			// If this golden was merged into another, follow the replaced-by link to the survivor.
+			for (PatientLinkComponent link : golden.getLink()) {
+				if (link.getType() != null && "replaced-by".equalsIgnoreCase(link.getType().toCode())
+						&& link.getOther() != null && link.getOther().getReferenceElement().hasIdPart()) {
+					return link.getOther().getReferenceElement().getIdPart();
+				}
+			}
+			return golden.getIdElement().getIdPart();
+		}
+		catch (Exception e) {
+			log.error("Error resolving golden record id", e);
+			return null;
+		}
+	}
+
+	/**
+	 * Resolve the golden record id and store it on the patient as the configured golden-record
+	 * identifier type (default ECID). Suppresses the export advice so the write does not re-trigger a feed.
+	 */
+	public void synchronizeGoldenRecordId(Patient patient) {
+		String goldenId = this.getGoldenRecordId(patient);
+		if (goldenId == null || goldenId.isEmpty()) {
+			return;
+		}
+		PatientIdentifierType type = Context.getPatientService()
+				.getPatientIdentifierTypeByName(m_configuration.getGoldenRecordIdentifierType());
+		if (type == null) {
+			log.warn(String.format("Golden-record identifier type '%s' not found; cannot store golden id",
+					m_configuration.getGoldenRecordIdentifierType()));
+			return;
+		}
+		PatientIdentifier existing = patient.getPatientIdentifier(type);
+		if (existing != null && goldenId.equals(existing.getIdentifier())) {
+			return;
+		}
+		boolean prev = PatientSynchronizationAdvice.SUPPRESS.get();
+		PatientSynchronizationAdvice.SUPPRESS.set(true);
+		try {
+			if (existing != null) {
+				existing.setIdentifier(goldenId);
+				Context.getPatientService().savePatientIdentifier(existing);
+			} else {
+				Location loc = Context.getLocationService().getDefaultLocation();
+				PatientIdentifier pid = new PatientIdentifier(goldenId, type, loc);
+				pid.setPatient(patient);
+				Context.getPatientService().savePatientIdentifier(pid);
+			}
+		}
+		finally {
+			PatientSynchronizationAdvice.SUPPRESS.set(prev);
+		}
 	}
 }
