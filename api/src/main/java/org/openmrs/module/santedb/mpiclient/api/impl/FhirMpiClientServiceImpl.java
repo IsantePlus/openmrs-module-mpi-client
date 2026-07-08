@@ -309,6 +309,9 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			PatientIdentifier mothersIdentifier,
 			String nextOfKinName, String birthPlace,
 			Map<String, Object> otherDataPoints) throws MpiClientException {
+		if (otherDataPoints == null) {
+			otherDataPoints = new java.util.HashMap<String, Object>();
+		}
 		IQuery<IBaseBundle> query = this.getClient(true).search().forResource("Patient");
 
 		if (familyName != null && !familyName.isEmpty())
