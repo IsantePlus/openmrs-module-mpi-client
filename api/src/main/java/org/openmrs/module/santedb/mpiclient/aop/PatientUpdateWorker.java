@@ -136,6 +136,10 @@ public class PatientUpdateWorker extends Thread {
 						log.warn(String.format("Patient already has local identifier in domain %s", xrefDomain));
 				}
 			}
+
+			// Resolve the OpenCR golden record id (CRUID) and store it locally (e.g. as ECID) so the
+			// EMR holds the enterprise identity returned by the Client Registry after deduplication.
+			hieService.synchronizeGoldenRecordId(m_patient);
 		} catch (MpiClientException e) {
 			log.error(e);
 		} finally {
