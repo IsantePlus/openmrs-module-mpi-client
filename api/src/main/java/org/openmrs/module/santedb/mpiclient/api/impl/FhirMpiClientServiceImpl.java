@@ -862,22 +862,33 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 					continue;
 				}
 
-				MpiPatient mpiPatient = fhirUtil.parseFhirPatient(p, patientTranslator.toOpenmrsType(p));
+				// Parse each occurrence independently so one unparseable record does not drop the whole
+				// list. The fhir2 (1.11.x) address translator throws NPEs on some source address
+				// structures (e.g. consolidated-server records); we do not display address here, so drop
+				// it before translating to avoid that failure.
+				try {
+					p.setAddress(new java.util.ArrayList<org.hl7.fhir.r4.model.Address>());
 
-				// Derive a site label from the first identifier that carries a location extension.
-				for (org.hl7.fhir.r4.model.Identifier fhirId : p.getIdentifier()) {
-					org.hl7.fhir.r4.model.Extension locExt = fhirId
-							.getExtensionByUrl("http://fhir.openmrs.org/ext/patient/identifier#location");
-					if (locExt != null && locExt.getValue() instanceof org.hl7.fhir.r4.model.Reference) {
-						String site = ((org.hl7.fhir.r4.model.Reference) locExt.getValue()).getDisplay();
-						if (site != null && !site.isEmpty()) {
-							mpiPatient.setSourceLocation(site);
-							break;
+					MpiPatient mpiPatient = fhirUtil.parseFhirPatient(p, patientTranslator.toOpenmrsType(p));
+
+					// Derive a site label from the first identifier that carries a location extension.
+					for (org.hl7.fhir.r4.model.Identifier fhirId : p.getIdentifier()) {
+						org.hl7.fhir.r4.model.Extension locExt = fhirId
+								.getExtensionByUrl("http://fhir.openmrs.org/ext/patient/identifier#location");
+						if (locExt != null && locExt.getValue() instanceof org.hl7.fhir.r4.model.Reference) {
+							String site = ((org.hl7.fhir.r4.model.Reference) locExt.getValue()).getDisplay();
+							if (site != null && !site.isEmpty()) {
+								mpiPatient.setSourceLocation(site);
+								break;
+							}
 						}
 					}
-				}
 
-				occurrences.add(mpiPatient);
+					occurrences.add(mpiPatient);
+				}
+				catch (Exception perRecord) {
+					log.warn("Skipping an occurrence that could not be parsed", perRecord);
+				}
 			}
 		}
 		catch (Exception e) {
