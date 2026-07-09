@@ -832,6 +832,61 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	}
 
 	/**
+	 * Return every source record linked to the patient's golden record (the cross-facility occurrences),
+	 * resolved directly from the golden's links. Uses the resolved golden id, then fetches the golden with
+	 * {@code _include=Patient:link} so all linked source records come back in one bundle. The golden record
+	 * itself (which carries no demographics in this topology) is excluded; each occurrence's site is taken
+	 * from its identifier location extension when available.
+	 */
+	public List<MpiPatient> getGoldenRecordOccurrences(Patient patient) {
+		List<MpiPatient> occurrences = new java.util.ArrayList<MpiPatient>();
+		try {
+			String goldenId = this.getGoldenRecordId(patient);
+			if (goldenId == null || goldenId.isEmpty()) {
+				return occurrences;
+			}
+
+			Bundle bundle = this.getClient(true).search()
+					.byUrl("Patient?_id=" + goldenId + "&_include=Patient:link")
+					.returnBundle(Bundle.class).execute();
+
+			for (BundleEntryComponent entry : bundle.getEntry()) {
+				if (!(entry.getResource() instanceof org.hl7.fhir.r4.model.Patient)) {
+					continue;
+				}
+				org.hl7.fhir.r4.model.Patient p = (org.hl7.fhir.r4.model.Patient) entry.getResource();
+
+				// Skip the golden record itself (tagged with the golden uuid; carries no demographics).
+				if (p.hasMeta() && p.getMeta().hasTag() && p.getMeta().getTagFirstRep().hasCode()
+						&& p.getMeta().getTagFirstRep().getCode().equals(m_configuration.getGoldenRecordUuid())) {
+					continue;
+				}
+
+				MpiPatient mpiPatient = fhirUtil.parseFhirPatient(p, patientTranslator.toOpenmrsType(p));
+
+				// Derive a site label from the first identifier that carries a location extension.
+				for (org.hl7.fhir.r4.model.Identifier fhirId : p.getIdentifier()) {
+					org.hl7.fhir.r4.model.Extension locExt = fhirId
+							.getExtensionByUrl("http://fhir.openmrs.org/ext/patient/identifier#location");
+					if (locExt != null && locExt.getValue() instanceof org.hl7.fhir.r4.model.Reference) {
+						String site = ((org.hl7.fhir.r4.model.Reference) locExt.getValue()).getDisplay();
+						if (site != null && !site.isEmpty()) {
+							mpiPatient.setSourceLocation(site);
+							break;
+						}
+					}
+				}
+
+				occurrences.add(mpiPatient);
+			}
+		}
+		catch (Exception e) {
+			log.error("Error resolving golden record occurrences", e);
+		}
+		return occurrences;
+	}
+
+	/**
 	 * Resolve the golden record id and store it on the patient as the configured golden-record
 	 * identifier type (default ECID). Suppresses the export advice so the write does not re-trigger a feed.
 	 */
