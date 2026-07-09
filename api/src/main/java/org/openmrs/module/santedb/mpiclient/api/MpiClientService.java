@@ -91,6 +91,13 @@ public interface MpiClientService extends OpenmrsService {
     void synchronizeGoldenRecordId(Patient patient) throws MpiClientException;
 
     /**
+     * Return every source record linked to this patient's golden record across sites (the cross-facility
+     * occurrences), resolved directly from the golden's links rather than a demographic search. Empty if
+     * no golden is found or the MPI is unreachable.
+     */
+    List<MpiPatient> getGoldenRecordOccurrences(Patient patient) throws MpiClientException;
+
+    /**
      * Import the specified patient data from the PDQ supplier
      * @param identifier
      * @param asigningAuthority

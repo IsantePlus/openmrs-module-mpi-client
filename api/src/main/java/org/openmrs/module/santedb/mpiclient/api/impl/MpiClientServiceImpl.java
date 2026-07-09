@@ -182,6 +182,13 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
             this.m_fhirService.synchronizeGoldenRecordId(patient);
     }
 
+    @Override
+    public List<MpiPatient> getGoldenRecordOccurrences(Patient patient) throws MpiClientException {
+        if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+            return this.m_fhirService.getGoldenRecordOccurrences(patient);
+        return new java.util.ArrayList<MpiPatient>();
+    }
+
     /**
      * Import patient with specified patient data
      */

@@ -67,7 +67,6 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.Location;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.fhir2.api.FhirPatientIdentifierSystemService;
 import org.openmrs.module.santedb.mpiclient.aop.PatientSynchronizationAdvice;
 import org.openmrs.PersonAttribute;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
@@ -777,10 +776,24 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 				log.warn("Patient has no iSantePlus ID; cannot resolve golden record id");
 				return null;
 			}
-			FhirPatientIdentifierSystemService sysService = Context.getService(FhirPatientIdentifierSystemService.class);
-			String system = sysService.getUrlByPatientIdentifierType(localId.getIdentifierType());
+			// Resolve the FHIR identifier system the SAME way the export does: from the fhir2
+			// PatientTranslator output. This guarantees the query system matches exactly what was fed
+			// to OpenCR, and avoids a hard dependency on FhirPatientIdentifierSystemService, which is
+			// not registered on all fhir2 versions.
+			String system = null;
+			try {
+				org.hl7.fhir.r4.model.Patient fhirPatient = this.patientTranslator.toFhirResource(patient);
+				for (org.hl7.fhir.r4.model.Identifier fhirId : fhirPatient.getIdentifier()) {
+					if (fhirId.hasSystem() && localId.getIdentifier().equals(fhirId.getValue())) {
+						system = fhirId.getSystem();
+						break;
+					}
+				}
+			} catch (Exception e) {
+				log.warn("Could not translate patient to resolve identifier system", e);
+			}
 			if (system == null || system.isEmpty()) {
-				log.warn("No FHIR identifier system mapped for iSantePlus ID; cannot resolve golden record id");
+				log.warn("No FHIR identifier system for iSantePlus ID; cannot resolve golden record id");
 				return null;
 			}
 
@@ -816,6 +829,72 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			log.error("Error resolving golden record id", e);
 			return null;
 		}
+	}
+
+	/**
+	 * Return every source record linked to the patient's golden record (the cross-facility occurrences),
+	 * resolved directly from the golden's links. Uses the resolved golden id, then fetches the golden with
+	 * {@code _include=Patient:link} so all linked source records come back in one bundle. The golden record
+	 * itself (which carries no demographics in this topology) is excluded; each occurrence's site is taken
+	 * from its identifier location extension when available.
+	 */
+	public List<MpiPatient> getGoldenRecordOccurrences(Patient patient) {
+		List<MpiPatient> occurrences = new java.util.ArrayList<MpiPatient>();
+		try {
+			String goldenId = this.getGoldenRecordId(patient);
+			if (goldenId == null || goldenId.isEmpty()) {
+				return occurrences;
+			}
+
+			Bundle bundle = this.getClient(true).search()
+					.byUrl("Patient?_id=" + goldenId + "&_include=Patient:link")
+					.returnBundle(Bundle.class).execute();
+
+			for (BundleEntryComponent entry : bundle.getEntry()) {
+				if (!(entry.getResource() instanceof org.hl7.fhir.r4.model.Patient)) {
+					continue;
+				}
+				org.hl7.fhir.r4.model.Patient p = (org.hl7.fhir.r4.model.Patient) entry.getResource();
+
+				// Skip the golden record itself (tagged with the golden uuid; carries no demographics).
+				if (p.hasMeta() && p.getMeta().hasTag() && p.getMeta().getTagFirstRep().hasCode()
+						&& p.getMeta().getTagFirstRep().getCode().equals(m_configuration.getGoldenRecordUuid())) {
+					continue;
+				}
+
+				// Parse each occurrence independently so one unparseable record does not drop the whole
+				// list. The fhir2 (1.11.x) address translator throws NPEs on some source address
+				// structures (e.g. consolidated-server records); we do not display address here, so drop
+				// it before translating to avoid that failure.
+				try {
+					p.setAddress(new java.util.ArrayList<org.hl7.fhir.r4.model.Address>());
+
+					MpiPatient mpiPatient = fhirUtil.parseFhirPatient(p, patientTranslator.toOpenmrsType(p));
+
+					// Derive a site label from the first identifier that carries a location extension.
+					for (org.hl7.fhir.r4.model.Identifier fhirId : p.getIdentifier()) {
+						org.hl7.fhir.r4.model.Extension locExt = fhirId
+								.getExtensionByUrl("http://fhir.openmrs.org/ext/patient/identifier#location");
+						if (locExt != null && locExt.getValue() instanceof org.hl7.fhir.r4.model.Reference) {
+							String site = ((org.hl7.fhir.r4.model.Reference) locExt.getValue()).getDisplay();
+							if (site != null && !site.isEmpty()) {
+								mpiPatient.setSourceLocation(site);
+								break;
+							}
+						}
+					}
+
+					occurrences.add(mpiPatient);
+				}
+				catch (Exception perRecord) {
+					log.warn("Skipping an occurrence that could not be parsed", perRecord);
+				}
+			}
+		}
+		catch (Exception e) {
+			log.error("Error resolving golden record occurrences", e);
+		}
+		return occurrences;
 	}
 
 	/**
