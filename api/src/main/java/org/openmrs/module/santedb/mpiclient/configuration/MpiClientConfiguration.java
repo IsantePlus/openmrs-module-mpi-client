@@ -52,6 +52,8 @@ public class MpiClientConfiguration {
 	public static final String PROP_NAME_PIX_EP_PORT = "mpi-client.endpoint.pix.port";
 
 	public static final String PROP_NAME_ENT_ID = "mpi-client.pid.enterprise";
+	public static final String PROP_NAME_MSPP_CODE = "mpi-client.source.mspp";
+	public static final String PROP_NAME_SOURCE_KEY_SYS = "mpi-client.source.keySystem";
 	public static final String PROP_NAME_LOCAL_ID = "mpi-client.pid.local";
 	public static final String PROP_NAME_PREF_ID = "mpi-client.pid.nhid";
 	public static final String PROP_NAME_AUTO_PIT = "mpi-client.pid.updateIdTypes";
@@ -226,6 +228,23 @@ public class MpiClientConfiguration {
 	 */
 	public String getLocalPatientIdRoot() {
 		return this.getOrCreateGlobalProperty(PROP_NAME_LOCAL_ID, "LOCAL");
+	}
+
+	/**
+	 * The site's MSPP facility code, used (with the local patient_id) to build the SEDISH source-key
+	 * identifier so the real-time feed converges with the consolidated batch feed in OpenCR. Empty by
+	 * default; set per site. When empty, the source-key is not emitted and export falls back to create.
+	 */
+	public String getMsppCode() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_MSPP_CODE, "");
+	}
+
+	/**
+	 * The FHIR system for the SEDISH source-key identifier (mspp_code-patient_id). Must match the
+	 * consolidated pipeline's source_key_system.
+	 */
+	public String getSourceKeySystem() {
+		return this.getOrCreateGlobalProperty(PROP_NAME_SOURCE_KEY_SYS, "http://sedish-haiti.org/fhir/source-key");
 	}
 
 	/**
