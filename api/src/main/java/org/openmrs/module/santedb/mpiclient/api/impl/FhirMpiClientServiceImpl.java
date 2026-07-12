@@ -608,11 +608,38 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 			}
 
 			IGenericClient client = this.getClient(false);
-			MethodOutcome result = client.create().resource(admitMessage).execute();
 
-			if (!result.getCreated())
-				throw new MpiClientException(
-						String.format("Error from MPI :> %s", result.getResource().getClass().getName()));
+			// Build the SEDISH source-key (mspp_code-patient_id) so the real-time feed and the
+			// consolidated batch feed converge to a SINGLE source record in OpenCR (both feeds carry the
+			// same key and upsert on it). Only when the site's mspp code is configured.
+			String mspp = this.m_configuration.getMsppCode();
+			String sourceKey = null;
+			if (mspp != null && !mspp.isEmpty() && patientExport.getPatient().getPatientId() != null) {
+				sourceKey = mspp + "-" + patientExport.getPatient().getPatientId();
+				admitMessage.addIdentifier()
+						.setSystem(this.m_configuration.getSourceKeySystem())
+						.setValue(sourceKey);
+			}
+
+			MethodOutcome result;
+			if (sourceKey != null) {
+				// Conditional update on the source-key: creates if new, updates the existing source
+				// otherwise, so a patient fed by both paths does not produce a duplicate source.
+				result = client.update().resource(admitMessage)
+						.conditional()
+						.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
+								.systemAndIdentifier(this.m_configuration.getSourceKeySystem(), sourceKey))
+						.execute();
+				// A conditional update returns created=false when it updates; treat only a missing
+				// id/resource as a failure.
+				if (result.getId() == null && result.getResource() == null)
+					throw new MpiClientException("Error from MPI :> source-key upsert returned no id");
+			} else {
+				result = client.create().resource(admitMessage).execute();
+				if (!result.getCreated())
+					throw new MpiClientException(
+							String.format("Error from MPI :> %s", result.getResource().getClass().getName()));
+			}
 
 		}
 		catch (FhirClientConnectionException e) {
