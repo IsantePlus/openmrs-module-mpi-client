@@ -65,8 +65,14 @@ import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
+import org.openmrs.PatientIdentifierType.LocationBehavior;
+import org.openmrs.PersonName;
+import org.openmrs.PersonAddress;
+import org.openmrs.Relationship;
 import org.openmrs.Location;
+import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.santedb.mpiclient.api.MpiClientService;
 import org.openmrs.module.santedb.mpiclient.aop.PatientSynchronizationAdvice;
 import org.openmrs.PersonAttribute;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
@@ -548,8 +554,83 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	 */
 	@Override
 	public Patient importPatient(MpiPatient patient) throws MpiClientException {
-		// TODO Auto-generated method stub
-		return null;
+		// Match against a local record (by our local-id identifier); update it, else create a new one.
+		// Ported from HL7MpiClientServiceImpl.importPatient so import works in FHIR mode too.
+		Patient patientRecord = Context.getService(MpiClientService.class).matchWithExistingPatient(patient);
+
+		if (patientRecord != null) {
+			log.info(String.format("Matched MPI patient with local patient %s; updating", patientRecord.getId()));
+			for (PatientIdentifier id : patient.getIdentifiers()) {
+				if (id.getIdentifierType() == null) {
+					continue;
+				}
+				boolean hasId = false;
+				for (PatientIdentifier eid : patientRecord.getIdentifiers()) {
+					hasId |= eid.getIdentifier().equals(id.getIdentifier())
+					        && eid.getIdentifierType().getId().equals(id.getIdentifierType().getId());
+				}
+				if (!hasId) {
+					if (LocationBehavior.REQUIRED.equals(id.getIdentifierType().getLocationBehavior())
+					        && id.getLocation() == null) {
+						id.setLocation(Context.getLocationService().getDefaultLocation());
+					}
+					patientRecord.addIdentifier(id);
+				}
+			}
+			patientRecord.getNames().clear();
+			for (PersonName name : patient.getNames()) {
+				patientRecord.addName(name);
+			}
+			patientRecord.getAddresses().clear();
+			for (PersonAddress addr : patient.getAddresses()) {
+				patientRecord.addAddress(addr);
+			}
+			patientRecord.setDead(patient.getDead());
+			patientRecord.setDeathDate(patient.getDeathDate());
+			patientRecord.setBirthdate(patient.getBirthdate());
+			patientRecord.setBirthdateEstimated(patient.getBirthdateEstimated());
+			patientRecord.setGender(patient.getGender());
+		} else {
+			boolean isPreferred = false;
+			patientRecord = patient.toPatient();
+			// Drop the enterprise/MPI id (the identifier with no local type) — it isn't a local identifier.
+			PatientIdentifier ecidPid = null;
+			for (PatientIdentifier id : patientRecord.getIdentifiers()) {
+				if (id.getIdentifierType() == null) {
+					ecidPid = id;
+				}
+				isPreferred |= id.getPreferred();
+			}
+			if (ecidPid != null) {
+				patientRecord.removeIdentifier(ecidPid);
+			}
+			for (PatientIdentifier id : patientRecord.getIdentifiers()) {
+				if (id.getIdentifierType() != null
+				        && LocationBehavior.REQUIRED.equals(id.getIdentifierType().getLocationBehavior())
+				        && id.getLocation() == null) {
+					id.setLocation(Context.getLocationService().getDefaultLocation());
+				}
+			}
+			if (!isPreferred && !patientRecord.getIdentifiers().isEmpty()) {
+				patientRecord.getIdentifiers().iterator().next().setPreferred(true);
+			}
+		}
+
+		Patient importedPatient;
+		try {
+			importedPatient = Context.getPatientService().savePatient(patientRecord);
+		}
+		catch (APIException e) {
+			throw new MpiClientException("Unable to import patient from the MPI", e);
+		}
+
+		if (this.m_configuration.getUseOpenMRSRelationships() && patient.getRelationships() != null) {
+			for (Relationship rel : patient.getRelationships()) {
+				Context.getPersonService().saveRelationship(
+				    new Relationship(importedPatient, rel.getPersonB(), rel.getRelationshipType()));
+			}
+		}
+		return importedPatient;
 	}
 
 	/**
