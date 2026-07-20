@@ -287,11 +287,19 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 							&& gr.hasLink()) {
 						for (PatientLinkComponent grPatLink : gr.getLink()) {
 							if (grPatLink.getOther().getResource() != null) {
-
-								MpiPatient mpiPatient = fhirUtil.parseFhirPatient((org.hl7.fhir.r4.model.Patient) grPatLink.getOther().getResource(), patientTranslator.toOpenmrsType(
-										(org.hl7.fhir.r4.model.Patient) grPatLink.getOther().getResource()));
-
-								retVal.add(mpiPatient);
+								// Translate each linked source patient in isolation: a single
+								// untranslatable record (e.g. a cross-facility identifier type not
+								// present locally) must not fail the whole search result set.
+								try {
+									org.hl7.fhir.r4.model.Patient sourcePatient =
+											(org.hl7.fhir.r4.model.Patient) grPatLink.getOther().getResource();
+									MpiPatient mpiPatient = fhirUtil.parseFhirPatient(sourcePatient,
+											patientTranslator.toOpenmrsType(sourcePatient));
+									retVal.add(mpiPatient);
+								} catch (Exception ex) {
+									log.error("Skipping untranslatable MPI patient "
+											+ grPatLink.getOther().getReference(), ex);
+								}
 							}
 						}
 
