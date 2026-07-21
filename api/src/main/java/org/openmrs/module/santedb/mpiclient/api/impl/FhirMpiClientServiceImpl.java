@@ -710,25 +710,19 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 						.setValue(sourceKey);
 			}
 
-			MethodOutcome result;
-			if (sourceKey != null) {
-				// Conditional update on the source-key: creates if new, updates the existing source
-				// otherwise, so a patient fed by both paths does not produce a duplicate source.
-				result = client.update().resource(admitMessage)
-						.conditional()
-						.where(org.hl7.fhir.r4.model.Patient.IDENTIFIER.exactly()
-								.systemAndIdentifier(this.m_configuration.getSourceKeySystem(), sourceKey))
-						.execute();
-				// A conditional update returns created=false when it updates; treat only a missing
-				// id/resource as a failure.
-				if (result.getId() == null && result.getResource() == null)
-					throw new MpiClientException("Error from MPI :> source-key upsert returned no id");
-			} else {
-				result = client.create().resource(admitMessage).execute();
-				if (!result.getCreated())
-					throw new MpiClientException(
-							String.format("Error from MPI :> %s", result.getResource().getClass().getName()));
+			// OpenCR does NOT support FHIR conditional-update (PUT /Patient?identifier=...): it
+			// responds 404 "Cannot PUT /fhir/Patient". PUT by a stable id (the patient uuid) instead
+			// -- OpenCR matches/dedupes on the in-resource source-key identifier, so this is
+			// idempotent and converges with the consolidated batch feed, which also PUTs by id (see
+			// the fhir-router mediator). The source-key identifier added above is what makes both
+			// feeds resolve to a single source record.
+			String stableId = patientExport.getPatient().getUuid();
+			if (stableId != null && !stableId.isEmpty()) {
+				admitMessage.setId(stableId);
 			}
+			MethodOutcome result = client.update().resource(admitMessage).execute();
+			if (result.getId() == null && result.getResource() == null)
+				throw new MpiClientException("Error from MPI :> patient upsert returned no id");
 
 		}
 		catch (FhirClientConnectionException e) {
