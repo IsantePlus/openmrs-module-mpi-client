@@ -903,39 +903,28 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
 	/**
 	 * Resolve the OpenCR golden record id (CRUID) for a locally-registered patient: query the MPI by
-	 * the patient's iSantePlus ID, find the linked golden record (by golden tag), and follow any
-	 * replaced-by link to the surviving golden. Returns null when no golden record is found.
+	 * the patient's SEDISH source-key (mspp_code-patientId), find the linked golden record (by golden
+	 * tag), and follow any replaced-by link to the surviving golden. Returns null when no golden is
+	 * found.
+	 *
+	 * The source-key is used deliberately instead of the iSantePlus ID: iSantePlus IDs are issued
+	 * per-facility and are NOT globally unique (the same value can belong to different people at
+	 * different sites), so resolving by iSantePlus ID can return a DIFFERENT person's golden — the
+	 * cause of ECID/Golden-ID cross-linking. The source-key is globally unique and is stamped on every
+	 * exported record (see exportPatient), so it resolves to exactly this patient's golden.
 	 */
 	public String getGoldenRecordId(Patient patient) {
 		try {
-			PatientIdentifier localId = patient.getPatientIdentifier("iSantePlus ID");
-			if (localId == null) {
-				log.warn("Patient has no iSantePlus ID; cannot resolve golden record id");
+			String mspp = this.m_configuration.getMsppCode();
+			if (mspp == null || mspp.isEmpty() || patient.getPatientId() == null) {
+				log.warn("No mspp code or patient id; cannot resolve golden record id by source-key");
 				return null;
 			}
-			// Resolve the FHIR identifier system the SAME way the export does: from the fhir2
-			// PatientTranslator output. This guarantees the query system matches exactly what was fed
-			// to OpenCR, and avoids a hard dependency on FhirPatientIdentifierSystemService, which is
-			// not registered on all fhir2 versions.
-			String system = null;
-			try {
-				org.hl7.fhir.r4.model.Patient fhirPatient = this.patientTranslator.toFhirResource(patient);
-				for (org.hl7.fhir.r4.model.Identifier fhirId : fhirPatient.getIdentifier()) {
-					if (fhirId.hasSystem() && localId.getIdentifier().equals(fhirId.getValue())) {
-						system = fhirId.getSystem();
-						break;
-					}
-				}
-			} catch (Exception e) {
-				log.warn("Could not translate patient to resolve identifier system", e);
-			}
-			if (system == null || system.isEmpty()) {
-				log.warn("No FHIR identifier system for iSantePlus ID; cannot resolve golden record id");
-				return null;
-			}
+			String system = this.m_configuration.getSourceKeySystem();
+			String value = mspp + "-" + patient.getPatientId();
 
 			Bundle bundle = this.getClient(true).search()
-					.byUrl("Patient?identifier=" + system + "|" + localId.getIdentifier() + "&_include=Patient:link")
+					.byUrl("Patient?identifier=" + system + "|" + value + "&_include=Patient:link")
 					.returnBundle(Bundle.class).execute();
 
 			org.hl7.fhir.r4.model.Patient golden = null;
