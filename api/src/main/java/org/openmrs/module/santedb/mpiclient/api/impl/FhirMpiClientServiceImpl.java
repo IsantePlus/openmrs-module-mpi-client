@@ -57,6 +57,7 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.ContactPoint;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
+import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Patient.PatientLinkComponent;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.StringType;
@@ -104,6 +105,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 
 	// Log
 	private static final Log log = LogFactory.getLog(HL7MpiClientServiceImpl.class);
+
+	// A bare UUID is never a valid site/person identifier value — it's an internal MPI id (golden
+	// CRUID, ECID, or a source-record uuid). Such values must not be exported to the registry.
+	private static final java.util.regex.Pattern UUID_VALUE =
+	        java.util.regex.Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
 	// Get health information exchange information
 	private final MpiClientConfiguration m_configuration = MpiClientConfiguration.getInstance();
@@ -651,6 +657,27 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 		try {
 			admitMessage = patientTranslator.toFhirResource(patientExport.getPatient());
 			admitMessage.getNameFirstRep().setUse(HumanName.NameUse.OFFICIAL);
+
+			// Sanitize the exported identifier set so we never propagate corruption to the registry:
+			//   - drop UUID-valued ids (the local ECID/golden id and any imported record uuid — these
+			//     are internal MPI ids, not site identifiers),
+			//   - drop blanks, and dedupe by system (keep the first value per system).
+			// The site source-key is added fresh below, so it is unaffected. PUT-by-id then REPLACES
+			// the OpenCR resource with this clean set (no accumulation across re-exports).
+			List<Identifier> cleanedIds = new ArrayList<Identifier>();
+			Set<String> seenIdSystems = new HashSet<String>();
+			for (Identifier id : admitMessage.getIdentifier()) {
+				String sys = id.getSystem();
+				String val = id.getValue();
+				if (val == null || val.isEmpty() || UUID_VALUE.matcher(val).matches()) {
+					continue;
+				}
+				if (sys != null && !sys.isEmpty() && !seenIdSystems.add(sys)) {
+					continue;
+				}
+				cleanedIds.add(id);
+			}
+			admitMessage.setIdentifier(cleanedIds);
 
 			//           Set mother's name
 			if (patientExport.getMothersMaidenName() != null) {
