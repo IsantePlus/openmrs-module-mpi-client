@@ -189,6 +189,12 @@ public class MpiClientServiceImpl extends BaseOpenmrsService
         return new java.util.ArrayList<MpiPatient>();
     }
 
+    public List<MpiPatient> getGoldenRecordOccurrencesByGoldenId(String goldenId) throws MpiClientException {
+        if (MpiClientConfiguration.getInstance().getMessageFormat().equals("fhir"))
+            return this.m_fhirService.getGoldenRecordOccurrencesByGoldenId(goldenId);
+        return new java.util.ArrayList<MpiPatient>();
+    }
+
     /**
      * Import patient with specified patient data
      */
