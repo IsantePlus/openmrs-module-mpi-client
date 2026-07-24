@@ -965,9 +965,23 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 	 * from its identifier location extension when available.
 	 */
 	public List<MpiPatient> getGoldenRecordOccurrences(Patient patient) {
+		// Records at OTHER facilities: resolve this patient's golden, then list its sources excluding
+		// the local EMR's own copy (OpenCR holds it under the local patient uuid, set at export time).
+		String goldenId = this.getGoldenRecordId(patient);
+		return occurrencesForGolden(goldenId, patient != null ? patient.getUuid() : null);
+	}
+
+	/**
+	 * List every source record under a golden record (CRUID) directly — for viewing a patient's
+	 * registry record by golden id, independent of any local patient record.
+	 */
+	public List<MpiPatient> getGoldenRecordOccurrencesByGoldenId(String goldenId) {
+		return occurrencesForGolden(goldenId, null);
+	}
+
+	private List<MpiPatient> occurrencesForGolden(String goldenId, String excludeSourceId) {
 		List<MpiPatient> occurrences = new java.util.ArrayList<MpiPatient>();
 		try {
-			String goldenId = this.getGoldenRecordId(patient);
 			if (goldenId == null || goldenId.isEmpty()) {
 				return occurrences;
 			}
@@ -985,6 +999,11 @@ public class FhirMpiClientServiceImpl implements MpiClientWorker, ApplicationCon
 				// Skip the golden record itself (tagged with the golden uuid; carries no demographics).
 				if (p.hasMeta() && p.getMeta().hasTag() && p.getMeta().getTagFirstRep().hasCode()
 						&& p.getMeta().getTagFirstRep().getCode().equals(m_configuration.getGoldenRecordUuid())) {
+					continue;
+				}
+
+				// Skip the local EMR's own copy when requested — occurrences list OTHER facilities only.
+				if (excludeSourceId != null && excludeSourceId.equals(p.getIdElement().getIdPart())) {
 					continue;
 				}
 

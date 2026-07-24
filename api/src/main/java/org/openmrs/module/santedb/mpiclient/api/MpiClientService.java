@@ -98,6 +98,12 @@ public interface MpiClientService extends OpenmrsService {
     List<MpiPatient> getGoldenRecordOccurrences(Patient patient) throws MpiClientException;
 
     /**
+     * List every source record under a golden record (CRUID) directly, independent of any local
+     * patient record. Empty if the golden is not found or the MPI is unreachable.
+     */
+    List<MpiPatient> getGoldenRecordOccurrencesByGoldenId(String goldenId) throws MpiClientException;
+
+    /**
      * Import the specified patient data from the PDQ supplier
      * @param identifier
      * @param asigningAuthority
